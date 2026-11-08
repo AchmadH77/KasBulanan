@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Buku kas: sampul buku terbuka dengan garis-garis catatan dan tanda plus uang masuk -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,26 L78,26 A6,6 0 0 1 84,32 L84,76 A6,6 0 0 1 78,82 L30,82 Z" />
+    <path
+        android:fillColor="#0E5C3A"
+        android:pathData="M38,38 L76,38 L76,44 L38,44 Z" />
+    <path
+        android:fillColor="#9BD8B8"
+        android:pathData="M38,50 L66,50 L66,55 L38,55 Z" />
+    <path
+        android:fillColor="#9BD8B8"
+        android:pathData="M38,60 L70,60 L70,65 L38,65 Z" />
+    <path
+        android:fillColor="#0E7A46"
+        android:pathData="M63,64 L69,64 L69,59 L74,59 L74,64 L79,64 L79,69 L74,69 L74,74 L69,74 L69,69 L63,69 Z" />
+</vector>
