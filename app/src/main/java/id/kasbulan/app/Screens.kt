@@ -338,10 +338,10 @@ fun TeksRupiahAnimasi(
     )
 }
 
-@Composable
 /** Keadaan sinkronisasi online untuk ikon status di Beranda. */
 enum class StatusSync { NONAKTIF, BELUM_MASUK, PROSES, BERHASIL, GAGAL }
 
+@Composable
 fun BerandaTab(
     bulan: BulanKas?,
     bulanTerakhir: BulanKas?,
