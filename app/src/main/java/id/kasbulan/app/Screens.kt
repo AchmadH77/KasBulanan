@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
@@ -1620,6 +1621,127 @@ fun ModeOnlineScreen(
                 )
                 Spacer(Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+/**
+ * Gerbang masuk (pilihan G2): layar pertama saat mode online aktif dan
+ * belum ada yang masuk. Menawarkan masuk/daftar (email atau Google),
+ * reset kata sandi, dan jalan tamu "Lewati" untuk memakai aplikasi
+ * offline lokal tanpa akun. Hanya tampil bila Firebase terkonfigurasi.
+ */
+@Composable
+fun LayarLogin(
+    sibuk: Boolean,
+    pesanStatus: String?,
+    googleSiap: Boolean,
+    onMasuk: (String, String) -> Unit,
+    onDaftar: (String, String) -> Unit,
+    onMasukGoogle: () -> Unit,
+    onResetSandi: (String) -> Unit,
+    onLewati: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var kataSandi by remember { mutableStateOf("") }
+    val masukanSah = email.contains("@") && kataSandi.length >= 6
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(Modifier.height(56.dp))
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(76.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.AccountBalanceWallet,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "KasBulanan",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                "Masuk untuk menyinkronkan buku kasmu",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = kataSandi,
+                onValueChange = { kataSandi = it },
+                label = { Text("Kata sandi (min. 6 karakter)") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = { onMasuk(email, kataSandi) },
+                enabled = !sibuk && masukanSah,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (sibuk) "Memproses..." else "Masuk") }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { onDaftar(email, kataSandi) },
+                enabled = !sibuk && masukanSah,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Daftar Akun Baru") }
+            if (googleSiap) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onMasukGoogle,
+                    enabled = !sibuk,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Masuk dengan Google") }
+            }
+            TextButton(
+                onClick = { onResetSandi(email) },
+                enabled = !sibuk && email.contains("@")
+            ) { Text("Lupa kata sandi?") }
+            if (pesanStatus != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    pesanStatus,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(20.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+            TextButton(onClick = onLewati, enabled = !sibuk) {
+                Text("Lewati - Pakai Tanpa Akun")
+            }
+            Text(
+                "Mode tamu: data hanya di HP ini, tanpa sinkronisasi.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
