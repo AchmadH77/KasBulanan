@@ -8,8 +8,14 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.tasks.await
@@ -51,6 +57,51 @@ object FirebaseKit {
 
     fun keluar() {
         auth()?.signOut()
+    }
+
+    /**
+     * Login Google hanya mungkin bila google-services.json memuat web
+     * client id (muncul setelah provider Google diaktifkan dan sidik
+     * jari SHA-1 didaftarkan - lihat docs/ONLINE.md). Dicek lewat
+     * resource yang dibangkitkan plugin, bukan referensi langsung,
+     * supaya kode tetap terkompilasi saat file-nya belum memuatnya.
+     */
+    fun googleSiap(context: Context): Boolean =
+        context.resources.getIdentifier(
+            "default_web_client_id", "string", context.packageName
+        ) != 0
+
+    suspend fun masukDenganGoogle(context: Context): String {
+        val auth = auth() ?: throw IllegalStateException("Firebase belum dikonfigurasi")
+        val idRes = context.resources.getIdentifier(
+            "default_web_client_id", "string", context.packageName
+        )
+        if (idRes == 0) throw IllegalStateException("Login Google belum dikonfigurasi")
+        val opsi = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(context.getString(idRes))
+            .build()
+        val permintaan = GetCredentialRequest.Builder()
+            .addCredentialOption(opsi)
+            .build()
+        val hasil = CredentialManager.create(context).getCredential(context, permintaan)
+        val kredensial = hasil.credential
+        if (kredensial is CustomCredential &&
+            kredensial.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            val akun = GoogleIdTokenCredential.createFrom(kredensial.data)
+            val hasilMasuk = auth.signInWithCredential(
+                GoogleAuthProvider.getCredential(akun.idToken, null)
+            ).await()
+            return hasilMasuk.user?.email ?: akun.id
+        }
+        throw IllegalStateException("Kredensial Google tidak dikenal")
+    }
+
+    /** Kirim email atur ulang kata sandi (dibangunkan Firebase Auth). */
+    suspend fun kirimResetSandi(email: String) {
+        val auth = auth() ?: throw IllegalStateException("Firebase belum dikonfigurasi")
+        auth.sendPasswordResetEmail(email).await()
     }
 }
 
