@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// KasBulanan online sync: every user may only read and write documents
+// under their own users/{uid} tree. Deploy this file in the Firebase
+// Console (Firestore Database -> Rules) or with the Firebase CLI.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
