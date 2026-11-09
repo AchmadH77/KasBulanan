@@ -239,7 +239,7 @@ fun KasBulananApp(
             }
         },
         floatingActionButton = {
-            if ((tab == 0 || tab == 1) && bulanBerjalan != null && !showRekapHariIni && !showForm) {
+            if (tab == 0 && bulanBerjalan != null && !showRekapHariIni && !showForm) {
                 ExtendedFloatingActionButton(
                     onClick = { bukaForm(null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
