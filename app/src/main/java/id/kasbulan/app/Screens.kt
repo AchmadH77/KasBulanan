@@ -312,7 +312,7 @@ fun BerandaTab(
                             formatRupiah(saldo.total),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color.White
                         )
                         Spacer(Modifier.height(10.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.35f))
@@ -320,11 +320,11 @@ fun BerandaTab(
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Tunai (laci)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                Text(formatRupiah(saldo.tunai), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Text(formatRupiah(saldo.tunai), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                                 Text("QRIS (rekening)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                Text(formatRupiah(saldo.qris), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Text(formatRupiah(saldo.qris), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
