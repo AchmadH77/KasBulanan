@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -224,6 +225,7 @@ fun BerandaTab(
     onBukaBulanBerikutnya: () -> Unit,
     onEditSaldoAwal: () -> Unit,
     onTransfer: () -> Unit,
+    onRekapHariIni: () -> Unit,
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
     LazyColumn(
@@ -377,6 +379,66 @@ fun BerandaTab(
                     }
                 }
             }
+            item {
+                val hariIni = LocalDate.now()
+                val rHariIni = ringkasanHari(hariIni, transaksi)
+                val rKemarin = ringkasanHari(hariIni.minusDays(1), transaksi)
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "KAS HARI INI",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                formatTanggal(hariIni),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Masuk ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "+" + formatRupiah(rHariIni.totalMasuk),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "  \u00b7  Keluar ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                formatRupiah(-rHariIni.totalKeluar),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Button(onClick = onRekapHariIni, modifier = Modifier.fillMaxWidth()) {
+                            Text("Rekap Hari Ini")
+                        }
+                        Text(
+                            if (rKemarin.jumlahTransaksi > 0) {
+                                "Kemarin: masuk " + formatRupiah(rKemarin.totalMasuk) +
+                                    " \u00b7 keluar " + formatRupiah(rKemarin.totalKeluar)
+                            } else {
+                                "Kemarin: tidak ada catatan."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
             if (kalenderBerbeda) {
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
@@ -408,6 +470,204 @@ fun BerandaTab(
             }
         }
         item { Spacer(Modifier.height(72.dp)) }
+    }
+}
+
+// ---------------- Rekap Hari Ini ----------------
+
+@Composable
+fun RekapHariIniScreen(
+    bulan: BulanKas,
+    transaksi: List<TransaksiKas>,
+    namaApotek: String,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val hariIni = LocalDate.now()
+    val ringkasan = ringkasanHari(hariIni, transaksi)
+    val saldoAkhir = saldoAkhirHari(bulan, transaksi, hariIni)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                }
+                Column {
+                    Text("Rekap Hari Ini", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        formatTanggal(hariIni),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        if (ringkasan.jumlahTransaksi == 0) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                    Text(
+                        "Belum ada catatan hari ini. Catat penjualan dan pengeluaran seperti biasa, rekapnya terisi otomatis.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+        } else {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text("Pemasukan", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "+" + formatRupiah(ringkasan.totalMasuk),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        for (r in ringkasan.rincianMasuk) {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "   " + r.kategori + " \u00b7 " + saluranLabel(r.saluran),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(r.nominal), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        HorizontalDivider()
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text("Pengeluaran", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                formatRupiah(-ringkasan.totalKeluar),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        for (r in ringkasan.rincianKeluar) {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "   " + r.kategori + " \u00b7 " + saluranLabel(r.saluran),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(formatRupiah(r.nominal), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (tr in ringkasan.transfer) {
+                        Text(
+                            "Transfer " + saluranLabel(tr.dari) + " \u2192 " + saluranLabel(tr.ke) +
+                                ": " + formatRupiah(tr.nominal) + " (netral)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    if (ringkasan.transfer.isNotEmpty()) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.35f))
+                    }
+                    Text(
+                        "SALDO AKHIR HARI INI",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("Tunai", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            formatRupiah(saldoAkhir.tunai),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("QRIS", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            formatRupiah(saldoAkhir.qris),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row {
+                    Text(
+                        "Total kas akhir: ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        formatRupiah(saldoAkhir.total),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                Text(
+                    ringkasan.jumlahTransaksi.toString() + " transaksi tercatat hari ini \u00b7 bulan " +
+                        bulanLabel(bulan.tahun, bulan.bulan) + " berjalan",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        item {
+            Button(
+                onClick = {
+                    val teks = rekapHariText(namaApotek, hariIni, ringkasan, saldoAkhir)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, teks)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Bagikan Rekap"))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Bagikan Rekap")
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        "Rekap ini rangkuman hari berjalan.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Angka resmi bulan tetap ditetapkan saat Tutup Buku.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Detail per transaksi ada di tab Riwayat.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
@@ -504,6 +764,7 @@ fun LaporanTab(
         ?: bulanList.last()
     val saldo = hitungSaldo(selected, transaksi)
     val ringkasan = ringkasanBulan(transaksi, selected.id)
+    val pendapatanHarian = pendapatanPerHari(transaksi, selected.id)
     val ditutup = selected.status == STATUS_DITUTUP
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -603,6 +864,87 @@ fun LaporanTab(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+        if (pendapatanHarian.isNotEmpty()) {
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Pendapatan per Hari", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "kategori Penjualan saja",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            item {
+                val maksPendapatan = pendapatanHarian.maxOf { it.total }
+                val totalPendapatan = pendapatanHarian.sumOf { it.total }
+                val hariIniLaporan = LocalDate.now()
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        for (p in pendapatanHarian) {
+                            val tertinggi = p.total == maksPendapatan && pendapatanHarian.size > 1
+                            val hariIniBaris = p.tanggal == hariIniLaporan
+                            val sorot = hariIniBaris || tertinggi
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        formatTanggalSingkat(p.tanggal) +
+                                            (if (hariIniBaris) " \u00b7 hari ini" else "") +
+                                            (if (tertinggi) " \u00b7 tertinggi" else ""),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (sorot) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                    Text(
+                                        formatRupiah(p.total),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (sorot) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                LinearProgressIndicator(
+                                    progress = { (p.total.toFloat() / maksPendapatan.toFloat()).coerceIn(0f, 1f) },
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                        HorizontalDivider()
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                "TOTAL PENDAPATAN",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                formatRupiah(totalPendapatan),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text(
+                            pendapatanHarian.size.toString() +
+                                " hari tercatat \u2014 jumlah semua baris di atas. Tambahan Modal tidak dihitung sebagai pendapatan.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

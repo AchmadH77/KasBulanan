@@ -2,6 +2,7 @@ package id.kasbulan.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -123,6 +124,7 @@ fun KasBulananApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var tab by remember { mutableIntStateOf(0) }
+    var showRekapHariIni by remember { mutableStateOf(false) }
     val bulanBerjalan = bulanList.firstOrNull { it.status == STATUS_BERJALAN }
     val bulanTerakhir = bulanList.lastOrNull()
     val labelBerikutnya = bulanTerakhir?.let {
@@ -198,38 +200,40 @@ fun KasBulananApp(
         }
     }
 
+    BackHandler(enabled = showRekapHariIni) { showRekapHariIni = false }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = tab == 0,
-                    onClick = { tab = 0 },
+                    onClick = { showRekapHariIni = false; tab = 0 },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     label = { Text("Beranda") }
                 )
                 NavigationBarItem(
                     selected = tab == 1,
-                    onClick = { tab = 1 },
+                    onClick = { showRekapHariIni = false; tab = 1 },
                     icon = { Icon(Icons.Default.History, contentDescription = null) },
                     label = { Text("Riwayat") }
                 )
                 NavigationBarItem(
                     selected = tab == 2,
-                    onClick = { tab = 2 },
+                    onClick = { showRekapHariIni = false; tab = 2 },
                     icon = { Icon(Icons.Default.Assessment, contentDescription = null) },
                     label = { Text("Laporan") }
                 )
                 NavigationBarItem(
                     selected = tab == 3,
-                    onClick = { tab = 3 },
+                    onClick = { showRekapHariIni = false; tab = 3 },
                     icon = { Icon(Icons.Default.MoreHoriz, contentDescription = null) },
                     label = { Text("Lainnya") }
                 )
             }
         },
         floatingActionButton = {
-            if ((tab == 0 || tab == 1) && bulanBerjalan != null) {
+            if ((tab == 0 || tab == 1) && bulanBerjalan != null && !showRekapHariIni) {
                 ExtendedFloatingActionButton(
                     onClick = { bukaForm(null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -244,7 +248,14 @@ fun KasBulananApp(
                 .padding(padding)
         ) {
             when (tab) {
-                0 -> BerandaTab(
+                0 -> if (showRekapHariIni && bulanBerjalan != null) {
+                    RekapHariIniScreen(
+                        bulan = bulanBerjalan,
+                        transaksi = transaksiList,
+                        namaApotek = namaApotek,
+                        onBack = { showRekapHariIni = false }
+                    )
+                } else BerandaTab(
                     bulan = bulanBerjalan,
                     bulanTerakhir = bulanTerakhir,
                     labelBulanBerikutnya = labelBerikutnya,
@@ -278,6 +289,7 @@ fun KasBulananApp(
                         transferInitial = null
                         showTransfer = true
                     },
+                    onRekapHariIni = { showRekapHariIni = true },
                     onTransaksiClick = { bukaForm(it) }
                 )
                 1 -> RiwayatTab(bulanList, transaksiList) { bukaForm(it) }

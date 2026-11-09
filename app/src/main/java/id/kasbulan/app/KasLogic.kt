@@ -45,22 +45,41 @@ data class SaldoKas(val tunai: Long, val qris: Long) {
  * bulan itu. Transfer menggeser uang antar dompet, total tidak berubah.
  */
 fun hitungSaldo(bulan: BulanKas, transaksi: List<TransaksiKas>): SaldoKas {
-    var tunai = bulan.saldoAwalTunai
-    var qris = bulan.saldoAwalQris
+    var saldo = SaldoKas(bulan.saldoAwalTunai, bulan.saldoAwalQris)
     for (t in transaksi) {
         if (t.bulanId != bulan.id) continue
-        when (t.jenis) {
-            JENIS_MASUK ->
-                if (t.saluran == SALURAN_QRIS) qris += t.nominal else tunai += t.nominal
-            JENIS_KELUAR ->
-                if (t.saluran == SALURAN_QRIS) qris -= t.nominal else tunai -= t.nominal
-            JENIS_TRANSFER -> {
-                if (t.saluran == SALURAN_QRIS) qris -= t.nominal else tunai -= t.nominal
-                if (t.saluranTujuan == SALURAN_QRIS) qris += t.nominal else tunai += t.nominal
-            }
-        }
+        saldo = terapkanSaldo(saldo, t)
     }
-    return SaldoKas(tunai, qris)
+    return saldo
+}
+
+/** Saldo pada AKHIR satu tanggal: hanya catatan bulan itu sampai tanggal tersebut yang dihitung. */
+fun saldoAkhirHari(bulan: BulanKas, transaksi: List<TransaksiKas>, tanggal: LocalDate): SaldoKas {
+    var saldo = SaldoKas(bulan.saldoAwalTunai, bulan.saldoAwalQris)
+    for (t in transaksi) {
+        if (t.bulanId != bulan.id) continue
+        if (epochToLocalDate(t.epoch).isAfter(tanggal)) continue
+        saldo = terapkanSaldo(saldo, t)
+    }
+    return saldo
+}
+
+/** Terapkan satu transaksi pada sepasang saldo dompet. */
+private fun terapkanSaldo(saldo: SaldoKas, t: TransaksiKas): SaldoKas = when (t.jenis) {
+    JENIS_MASUK ->
+        if (t.saluran == SALURAN_QRIS) saldo.copy(qris = saldo.qris + t.nominal)
+        else saldo.copy(tunai = saldo.tunai + t.nominal)
+    JENIS_KELUAR ->
+        if (t.saluran == SALURAN_QRIS) saldo.copy(qris = saldo.qris - t.nominal)
+        else saldo.copy(tunai = saldo.tunai - t.nominal)
+    JENIS_TRANSFER -> {
+        var tunai = saldo.tunai
+        var qris = saldo.qris
+        if (t.saluran == SALURAN_QRIS) qris -= t.nominal else tunai -= t.nominal
+        if (t.saluranTujuan == SALURAN_QRIS) qris += t.nominal else tunai += t.nominal
+        SaldoKas(tunai, qris)
+    }
+    else -> saldo
 }
 
 /** Ringkasan satu bulan. Transfer TIDAK dihitung sebagai masuk/keluar. */
@@ -124,6 +143,114 @@ fun laporanText(bulan: BulanKas, namaApotek: String, transaksi: List<TransaksiKa
     return sb.toString()
 }
 
+// ---------- Harian ----------
+
+const val KATEGORI_PENJUALAN = "Penjualan"
+
+/** Satu baris rincian harian: total satu kategori pada satu saluran. */
+data class RincianHari(val kategori: String, val saluran: String, val nominal: Long)
+
+/** Satu perpindahan antar dompet pada satu hari. */
+data class TransferHari(val dari: String, val ke: String, val nominal: Long)
+
+/**
+ * Ringkasan SATU hari kalender dari seluruh catatan (satu hari tidak
+ * terikat satu bulan). Transfer dicatat terpisah - bukan masuk/keluar.
+ */
+data class RingkasanHari(
+    val totalMasuk: Long,
+    val totalKeluar: Long,
+    val rincianMasuk: List<RincianHari>,
+    val rincianKeluar: List<RincianHari>,
+    val transfer: List<TransferHari>,
+    val jumlahTransaksi: Int
+)
+
+fun ringkasanHari(tanggal: LocalDate, transaksi: List<TransaksiKas>): RingkasanHari {
+    var masuk = 0L
+    var keluar = 0L
+    val petaMasuk = LinkedHashMap<Pair<String, String>, Long>()
+    val petaKeluar = LinkedHashMap<Pair<String, String>, Long>()
+    val daftarTransfer = ArrayList<TransferHari>()
+    var jumlah = 0
+    for (t in transaksi) {
+        if (epochToLocalDate(t.epoch) != tanggal) continue
+        jumlah++
+        when (t.jenis) {
+            JENIS_MASUK -> {
+                masuk += t.nominal
+                val kunci = t.kategori to t.saluran
+                petaMasuk[kunci] = (petaMasuk[kunci] ?: 0L) + t.nominal
+            }
+            JENIS_KELUAR -> {
+                keluar += t.nominal
+                val kunci = t.kategori to t.saluran
+                petaKeluar[kunci] = (petaKeluar[kunci] ?: 0L) + t.nominal
+            }
+            JENIS_TRANSFER -> daftarTransfer.add(
+                TransferHari(t.saluran, t.saluranTujuan ?: SALURAN_TUNAI, t.nominal)
+            )
+        }
+    }
+    return RingkasanHari(
+        totalMasuk = masuk,
+        totalKeluar = keluar,
+        rincianMasuk = petaMasuk.map { (kunci, nominal) -> RincianHari(kunci.first, kunci.second, nominal) },
+        rincianKeluar = petaKeluar.map { (kunci, nominal) -> RincianHari(kunci.first, kunci.second, nominal) },
+        transfer = daftarTransfer,
+        jumlahTransaksi = jumlah
+    )
+}
+
+/** Pendapatan (kategori Penjualan saja) pada satu tanggal. */
+data class PendapatanHari(val tanggal: LocalDate, val total: Long)
+
+/**
+ * Pendapatan per hari dalam satu bulan, urut tanggal. Hanya hari yang
+ * punya penjualan yang muncul; jumlah semua baris sama dengan total
+ * Penjualan bulan itu. Tambahan Modal BUKAN pendapatan, tidak dihitung.
+ */
+fun pendapatanPerHari(transaksi: List<TransaksiKas>, bulanId: Long): List<PendapatanHari> {
+    val perTanggal = sortedMapOf<LocalDate, Long>()
+    for (t in transaksi) {
+        if (t.bulanId != bulanId) continue
+        if (t.jenis != JENIS_MASUK || t.kategori != KATEGORI_PENJUALAN) continue
+        val tanggal = epochToLocalDate(t.epoch)
+        perTanggal[tanggal] = (perTanggal[tanggal] ?: 0L) + t.nominal
+    }
+    return perTanggal.map { (tanggal, total) -> PendapatanHari(tanggal, total) }
+}
+
+private fun labelSaluran(saluran: String): String = if (saluran == SALURAN_QRIS) "QRIS" else "Tunai"
+
+/** Teks rekap satu hari untuk dibagikan (WhatsApp dan lain-lain). */
+fun rekapHariText(namaApotek: String, tanggal: LocalDate, ringkasan: RingkasanHari, saldoAkhir: SaldoKas): String {
+    val sb = StringBuilder()
+    sb.append("Rekap Kas Harian - ").append(formatTanggal(tanggal)).append('\n')
+    if (namaApotek.isNotBlank()) sb.append(namaApotek).append('\n')
+    sb.append('\n')
+    sb.append("Pemasukan: +").append(formatRupiah(ringkasan.totalMasuk)).append('\n')
+    for (r in ringkasan.rincianMasuk) {
+        sb.append("- ").append(r.kategori).append(" (").append(labelSaluran(r.saluran))
+            .append("): ").append(formatRupiah(r.nominal)).append('\n')
+    }
+    sb.append("Pengeluaran: ").append(formatRupiah(-ringkasan.totalKeluar)).append('\n')
+    for (r in ringkasan.rincianKeluar) {
+        sb.append("- ").append(r.kategori).append(" (").append(labelSaluran(r.saluran))
+            .append("): ").append(formatRupiah(r.nominal)).append('\n')
+    }
+    for (tr in ringkasan.transfer) {
+        sb.append("Transfer ").append(labelSaluran(tr.dari)).append(" \u2192 ").append(labelSaluran(tr.ke))
+            .append(": ").append(formatRupiah(tr.nominal)).append('\n')
+    }
+    sb.append('\n')
+    sb.append("Saldo Akhir: ").append(formatRupiah(saldoAkhir.total))
+        .append(" (Tunai ").append(formatRupiah(saldoAkhir.tunai))
+        .append(" - QRIS ").append(formatRupiah(saldoAkhir.qris)).append(")\n")
+    sb.append("\nDibuat dengan KasBulanan")
+    return sb.toString()
+}
+
 // ---------- Format & tanggal ----------
 
 /** Mengelompokkan digit dengan titik ribuan: "1250000" menjadi "1.250.000". */
@@ -165,6 +292,12 @@ fun formatTanggal(date: LocalDate): String = date.format(FORMAT_TANGGAL)
 
 fun formatJam(epoch: Long): String =
     Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(FORMAT_JAM)
+
+private val FORMAT_TANGGAL_SINGKAT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE, d MMM", Locale("id", "ID"))
+
+/** Bentuk pendek tanggal: "Sen, 9 Nov". */
+fun formatTanggalSingkat(date: LocalDate): String = date.format(FORMAT_TANGGAL_SINGKAT)
 
 /** Label kepala kelompok riwayat: "Hari ini - ...", "Kemarin - ...", atau tanggal. */
 fun labelHari(date: LocalDate, hariIni: LocalDate): String = when (date) {
