@@ -199,20 +199,36 @@ fun KasBulananApp(
     }
     var onlineSibuk by remember { mutableStateOf(false) }
     var pesanOnline by remember { mutableStateOf<String?>(null) }
+    val googleSiap = remember { onlineSiap && FirebaseKit.googleSiap(context) }
+    var statusSync by remember {
+        mutableStateOf(
+            when {
+                !onlineSiap -> StatusSync.NONAKTIF
+                emailOnline == null -> StatusSync.BELUM_MASUK
+                syncTerakhir > 0L -> StatusSync.BERHASIL
+                else -> StatusSync.PROSES
+            }
+        )
+    }
 
     fun jalankanSync() {
         if (onlineSibuk) return
         onlineSibuk = true
+        statusSync = StatusSync.PROSES
         scope.launch {
             when (val hasil = SyncManager(repository).sinkronSekarang(context)) {
                 is HasilSync.Berhasil -> {
                     val kini = System.currentTimeMillis()
                     prefs.edit().putLong("online_sync_terakhir", kini).apply()
                     syncTerakhir = kini
+                    statusSync = StatusSync.BERHASIL
                     pesanOnline = "Sinkron berhasil: " + hasil.didorong +
                         " terkirim, " + hasil.ditarik + " diterima"
                 }
-                is HasilSync.Gagal -> pesanOnline = "Sinkron gagal: " + hasil.pesan
+                is HasilSync.Gagal -> {
+                    statusSync = StatusSync.GAGAL
+                    pesanOnline = "Sinkron gagal: " + hasil.pesan
+                }
                 HasilSync.BelumMasuk -> pesanOnline = "Belum masuk"
                 HasilSync.BelumDikonfigurasi -> pesanOnline = "Firebase belum dikonfigurasi"
             }
@@ -402,6 +418,8 @@ fun KasBulananApp(
                     labelBulanBerikutnya = labelBerikutnya,
                     transaksi = transaksiList,
                     namaApotek = namaApotek,
+                    statusSync = statusSync,
+                    onBukaOnline = { showOnline = true },
                     onMulaiBulanIni = {
                         scope.launch {
                             val ym = YearMonth.now()
@@ -463,6 +481,37 @@ fun KasBulananApp(
                     sinkronTerakhir = syncTerakhir,
                     sibuk = onlineSibuk,
                     pesanStatus = pesanOnline,
+                    googleSiap = googleSiap,
+                    onMasukGoogle = {
+                        onlineSibuk = true
+                        scope.launch {
+                            try {
+                                emailOnline = FirebaseKit.masukDenganGoogle(context)
+                                pesanOnline = "Berhasil masuk dengan Google"
+                                statusSync = StatusSync.PROSES
+                                onlineSibuk = false
+                                jalankanSync()
+                            } catch (e: Exception) {
+                                pesanOnline = "Gagal masuk dengan Google: " +
+                                    (e.message ?: "dibatalkan")
+                                onlineSibuk = false
+                            }
+                        }
+                    },
+                    onResetSandi = { email ->
+                        onlineSibuk = true
+                        scope.launch {
+                            try {
+                                FirebaseKit.kirimResetSandi(email.trim())
+                                pesanOnline = "Email reset kata sandi terkirim ke " +
+                                    email.trim()
+                            } catch (e: Exception) {
+                                pesanOnline = "Gagal mengirim reset: " +
+                                    (e.message ?: "periksa alamat email")
+                            }
+                            onlineSibuk = false
+                        }
+                    },
                     onMasuk = { email, sandi ->
                         onlineSibuk = true
                         scope.launch {
@@ -494,6 +543,7 @@ fun KasBulananApp(
                     onKeluar = {
                         FirebaseKit.keluar()
                         emailOnline = null
+                        statusSync = StatusSync.BELUM_MASUK
                         pesanOnline = "Sudah keluar - data di HP ini tidak berubah"
                     },
                     onSinkron = { jalankanSync() },
