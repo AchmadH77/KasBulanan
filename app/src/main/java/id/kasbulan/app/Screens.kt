@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -150,6 +151,19 @@ fun BulanSelector(bulanList: List<BulanKas>, selected: BulanKas, onSelect: (Bula
     }
 }
 
+/**
+ * Hijau khusus untuk nominal uang masuk (penjualan, total masuk,
+ * pendapatan): hijau terang di mode gelap, hijau tegas di mode terang.
+ * Sengaja bukan warna utama tema agar pemasukan selalu terbaca hijau.
+ */
+@Composable
+fun warnaHijauMasuk(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        Color(0xFF4ADE80)
+    } else {
+        Color(0xFF1E9E4A)
+    }
+
 @Composable
 fun TransaksiRow(t: TransaksiKas, clickable: Boolean, onClick: () -> Unit) {
     Card(
@@ -167,7 +181,7 @@ fun TransaksiRow(t: TransaksiKas, clickable: Boolean, onClick: () -> Unit) {
             val transfer = t.jenis == JENIS_TRANSFER
             val warna = when {
                 transfer -> MaterialTheme.colorScheme.onSurfaceVariant
-                masuk -> MaterialTheme.colorScheme.primary
+                masuk -> warnaHijauMasuk()
                 else -> MaterialTheme.colorScheme.error
             }
             Box(
@@ -430,7 +444,7 @@ fun BerandaTab(
                             TeksRupiahAnimasi(
                                 ringkasan.totalMasuk,
                                 MaterialTheme.typography.titleSmall,
-                                MaterialTheme.colorScheme.primary,
+                                warnaHijauMasuk(),
                                 FontWeight.Bold,
                                 awalan = "+"
                             )
@@ -497,7 +511,7 @@ fun BerandaTab(
                                 "+" + formatRupiah(rHariIni.totalMasuk),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = warnaHijauMasuk()
                             )
                             Text(
                                 "  \u00b7  Keluar ",
@@ -925,7 +939,7 @@ fun LaporanTab(
                             "+" + formatRupiah(ringkasan.totalMasuk),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = warnaHijauMasuk()
                         )
                     }
                 }
@@ -1073,7 +1087,7 @@ fun LaporanTab(
                                 formatRupiah(totalPendapatan),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = warnaHijauMasuk()
                             )
                         }
                         Text(
