@@ -14,9 +14,7 @@ class KasLogicTest {
     private val bulan = BulanKas(
         id = 1,
         tahun = 2026,
-        bulan = 11,
-        saldoAwalTunai = 1_000_000,
-        saldoAwalQris = 500_000
+        bulan = 11
     )
 
     private fun transaksi(
@@ -46,11 +44,13 @@ class KasLogicTest {
     )
 
     @Test
-    fun saldoDihitungPerSaluranDanTransferMenggeserDompet() {
-        val saldo = hitungSaldo(bulan, daftar)
-        assertEquals(1_250_000L, saldo.tunai)
-        assertEquals(700_000L, saldo.qris)
-        assertEquals(1_950_000L, saldo.total)
+    fun saldoGlobalMenghitungSemuaBulanDanTransferMenggeserDompet() {
+        val saldo = hitungSaldo(daftar)
+        // Tunai: 300rb masuk - 250rb keluar + 200rb transfer masuk + 999rb bulan lain.
+        assertEquals(1_249_000L, saldo.tunai)
+        // QRIS: 400rb masuk - 200rb transfer keluar.
+        assertEquals(200_000L, saldo.qris)
+        assertEquals(1_449_000L, saldo.total)
     }
 
     @Test
@@ -75,12 +75,13 @@ class KasLogicTest {
 
     @Test
     fun teksLaporanMemuatAngkaPerSaluran() {
-        val teks = laporanText(bulan, "Apotek Lestari", daftar)
+        val teks = laporanText(bulan, "Apotek Lestari", listOf(bulan), daftar)
         assertTrue(teks.contains("November 2026"))
         assertTrue(teks.contains("Apotek Lestari"))
-        assertTrue(teks.contains("Rp 1.950.000"))
-        assertTrue(teks.contains("Rp 1.250.000"))
-        assertTrue(teks.contains("Rp 700.000"))
+        assertTrue(teks.contains("Saldo Awal: Rp 0"))
+        assertTrue(teks.contains("Rp 450.000"))
+        assertTrue(teks.contains("Rp 250.000"))
+        assertTrue(teks.contains("Rp 200.000"))
     }
 
     @Test
@@ -89,42 +90,39 @@ class KasLogicTest {
         assertEquals("Januari 2027", bulanLabel(2027, 1))
     }
     @Test
-    fun saldoTanpaTransaksiSamaDenganSaldoAwal() {
-        val saldo = hitungSaldo(bulan, emptyList())
-        assertEquals(1_000_000L, saldo.tunai)
-        assertEquals(500_000L, saldo.qris)
-        assertEquals(1_500_000L, saldo.total)
+    fun saldoTanpaTransaksiNol() {
+        val saldo = hitungSaldo(emptyList())
+        assertEquals(0L, saldo.tunai)
+        assertEquals(0L, saldo.qris)
+        assertEquals(0L, saldo.total)
     }
 
     @Test
     fun transferTunaiKeQrisMenggeserSebaliknya() {
         val saldo = hitungSaldo(
-            bulan,
             listOf(transaksi(JENIS_TRANSFER, SALURAN_TUNAI, KATEGORI_TRANSFER, 150_000, tujuan = SALURAN_QRIS))
         )
-        assertEquals(850_000L, saldo.tunai)
-        assertEquals(650_000L, saldo.qris)
-        assertEquals(1_500_000L, saldo.total)
+        assertEquals(-150_000L, saldo.tunai)
+        assertEquals(150_000L, saldo.qris)
+        assertEquals(0L, saldo.total)
     }
 
     @Test
     fun keluarDariQrisMengurangiDompetQris() {
         val saldo = hitungSaldo(
-            bulan,
             listOf(transaksi(JENIS_KELUAR, SALURAN_QRIS, "Operasional", 125_000))
         )
-        assertEquals(1_000_000L, saldo.tunai)
-        assertEquals(375_000L, saldo.qris)
+        assertEquals(0L, saldo.tunai)
+        assertEquals(-125_000L, saldo.qris)
     }
 
     @Test
     fun saldoBolehNegatifTanpaDijepit() {
         val saldo = hitungSaldo(
-            bulan,
             listOf(transaksi(JENIS_KELUAR, SALURAN_TUNAI, "Pembelian Obat/PBF", 1_500_000))
         )
-        assertEquals(-500_000L, saldo.tunai)
-        assertEquals(0L, saldo.total)
+        assertEquals(-1_500_000L, saldo.tunai)
+        assertEquals(-1_500_000L, saldo.total)
     }
 
     @Test
@@ -189,18 +187,18 @@ class KasLogicTest {
 
     @Test
     fun teksLaporanBulanBerjalanTanpaTransaksi() {
-        val teks = laporanText(bulan, "", emptyList())
+        val teks = laporanText(bulan, "", listOf(bulan), emptyList())
         assertTrue(teks.contains("Status: Berjalan"))
-        assertTrue(teks.contains("Saldo Awal: Rp 1.500.000"))
+        assertTrue(teks.contains("Saldo Awal: Rp 0"))
         assertTrue(teks.contains("Total Masuk: Rp 0"))
-        assertTrue(teks.contains("Saldo Akhir: Rp 1.500.000"))
+        assertTrue(teks.contains("Saldo Akhir: Rp 0"))
         assertFalse(teks.contains("per kategori"))
         assertTrue(teks.endsWith("Dibuat dengan KasBulanan"))
     }
 
     @Test
     fun teksLaporanMemuatRincianPerKategori() {
-        val teks = laporanText(bulan, "Apotek Lestari", daftar)
+        val teks = laporanText(bulan, "Apotek Lestari", listOf(bulan), daftar)
         assertTrue(teks.contains("- Penjualan: Rp 700.000"))
         assertTrue(teks.contains("- Pembelian Obat/PBF: Rp 250.000"))
         assertTrue(teks.contains("Total Masuk: Rp 700.000"))
@@ -285,15 +283,36 @@ class KasLogicTest {
         val d3 = LocalDate.of(2026, 11, 3)
         val data = listOf(
             transaksiPada(d1, JENIS_MASUK, SALURAN_TUNAI, "Penjualan", 100_000),
+            // Catatan bulan lain pada tanggal yang sama ikut terhitung - saldo kontinu.
+            transaksiPada(d1, JENIS_MASUK, SALURAN_QRIS, "Penjualan", 25_000, bulanId = 2),
             transaksiPada(d3, JENIS_MASUK, SALURAN_TUNAI, "Penjualan", 900_000),
             transaksiPada(d3, JENIS_KELUAR, SALURAN_QRIS, "Operasional", 50_000)
         )
-        val saldo1 = saldoAkhirHari(bulan, data, d1)
-        assertEquals(1_100_000L, saldo1.tunai)
-        assertEquals(500_000L, saldo1.qris)
-        val saldo3 = saldoAkhirHari(bulan, data, d3)
-        assertEquals(2_000_000L, saldo3.tunai)
-        assertEquals(450_000L, saldo3.qris)
+        val saldo1 = saldoAkhirHari(data, d1)
+        assertEquals(100_000L, saldo1.tunai)
+        assertEquals(25_000L, saldo1.qris)
+        val saldo3 = saldoAkhirHari(data, d3)
+        assertEquals(1_000_000L, saldo3.tunai)
+        assertEquals(-25_000L, saldo3.qris)
+    }
+
+    @Test
+    fun saldoAwalBulanSamaDenganSaldoAkhirBulanSebelumnya() {
+        val oktober = BulanKas(id = 2, tahun = 2026, bulan = 10)
+        val semuaBulan = listOf(oktober, bulan)
+        val data = listOf(
+            transaksiPada(LocalDate.of(2026, 10, 20), JENIS_MASUK, SALURAN_TUNAI, "Penjualan", 500_000, bulanId = 2),
+            transaksiPada(LocalDate.of(2026, 10, 21), JENIS_KELUAR, SALURAN_QRIS, "Operasional", 50_000, bulanId = 2),
+            transaksiPada(LocalDate.of(2026, 11, 2), JENIS_MASUK, SALURAN_QRIS, "Penjualan", 200_000)
+        )
+        val awalNov = saldoAwalBulan(bulan, semuaBulan, data)
+        assertEquals(500_000L, awalNov.tunai)
+        assertEquals(-50_000L, awalNov.qris)
+        assertEquals(awalNov, saldoAkhirBulan(oktober, semuaBulan, data))
+        val akhirNov = saldoAkhirBulan(bulan, semuaBulan, data)
+        assertEquals(500_000L, akhirNov.tunai)
+        assertEquals(150_000L, akhirNov.qris)
+        assertEquals(SaldoKas(0, 0), saldoAwalBulan(oktober, semuaBulan, data))
     }
 
     @Test
@@ -309,7 +328,7 @@ class KasLogicTest {
             "Apotek Lestari",
             tanggal,
             ringkasanHari(tanggal, data),
-            saldoAkhirHari(bulan, data, tanggal)
+            saldoAkhirHari(data, tanggal)
         )
         assertTrue(teks.contains("Senin, 9 Nov 2026"))
         assertTrue(teks.contains("Pemasukan: +Rp 857.000"))
@@ -317,7 +336,7 @@ class KasLogicTest {
         assertTrue(teks.contains("- Penjualan (QRIS): Rp 372.000"))
         assertTrue(teks.contains("Pengeluaran: -Rp 60.000"))
         assertTrue(teks.contains("Transfer QRIS"))
-        assertTrue(teks.contains("Saldo Akhir: Rp 2.297.000"))
+        assertTrue(teks.contains("Saldo Akhir: Rp 797.000"))
         assertTrue(teks.endsWith("Dibuat dengan KasBulanan"))
     }
 

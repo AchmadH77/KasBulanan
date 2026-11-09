@@ -15,8 +15,6 @@ class BackupFilesTest {
             id = 1,
             tahun = 2026,
             bulan = 10,
-            saldoAwalTunai = 3_150_000,
-            saldoAwalQris = 0,
             status = STATUS_DITUTUP,
             ditutupPada = 1_730_000_000_000,
             totalMasukFinal = 14_200_000,
@@ -24,7 +22,7 @@ class BackupFilesTest {
             saldoAkhirTunaiFinal = 2_600_000,
             saldoAkhirQrisFinal = 1_300_000
         ),
-        BulanKas(id = 2, tahun = 2026, bulan = 11, saldoAwalTunai = 2_600_000, saldoAwalQris = 1_300_000)
+        BulanKas(id = 2, tahun = 2026, bulan = 11)
     )
 
     private val transaksi = listOf(
@@ -104,7 +102,7 @@ class BackupFilesTest {
     @Test
     fun parseMenolakBulanDiLuarKalender() {
         val bulanAneh = listOf(
-            BulanKas(id = 9, tahun = 2026, bulan = 13, saldoAwalTunai = 0, saldoAwalQris = 0)
+            BulanKas(id = 9, tahun = 2026, bulan = 13)
         )
         val json = BackupHelper.buildBackupJson(bulanAneh, emptyList(), 0)
         assertNull(BackupHelper.parseBackupJson(json))
