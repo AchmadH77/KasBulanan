@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The transaction form (Catat/Ubah Transaksi) is now a full-screen page instead of a dialog (design CT1): a back-arrow header, a label above every field, category chips that wrap into a grid instead of scrolling sideways, and a large Save button pinned at the bottom with Cancel beneath it (plus Delete when editing).
 - The Catat floating button now appears only on the Beranda tab, no longer on Riwayat, so the entry point is not duplicated.
 - The Laporan summary is now a hero layout (design LR1): the current balance sits in a large primary hero card together with the computed opening balance and the per-channel amounts, and Total Masuk / Total Keluar are two side-by-side mini cards beneath it.
+- The Lainnya tab is now a centered profile layout (design LY4): a large app icon and name in the middle with a version pill, the settings (Nama Apotek, Mode Gelap, Backup, Restore) grouped in one card with coloured icon chips, and Tentang in its own card.
 
 - The balance model is now a continuous ledger: there is no opening
   balance to enter, ever. The cash balance is simply the sum of all
