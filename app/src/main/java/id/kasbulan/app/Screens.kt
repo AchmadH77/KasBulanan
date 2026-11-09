@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -1204,8 +1205,10 @@ fun LainnyaTab(
     onEksporExcel: () -> Unit,
     onRestore: () -> Unit,
     onTentang: () -> Unit,
-    statusOnline: String,
-    onModeOnline: () -> Unit,
+    subjudulSync: String,
+    onBarisSync: () -> Unit,
+    emailAkun: String?,
+    onKeluarAkun: () -> Unit,
     bahasa: BahasaApp,
     onGantiBahasa: () -> Unit
 ) {
@@ -1349,9 +1352,9 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = Icons.Default.CloudSync,
                         tint = MaterialTheme.colorScheme.primary,
-                        title = tr("Mode Online", "Online Mode"),
-                        subtitle = statusOnline,
-                        onClick = onModeOnline,
+                        title = tr("Sinkronisasi", "Sync"),
+                        subtitle = subjudulSync,
+                        onClick = onBarisSync,
                         trailing = {
                             Icon(
                                 Icons.Default.ChevronRight,
@@ -1360,6 +1363,23 @@ fun LainnyaTab(
                             )
                         }
                     )
+                    if (emailAkun != null) {
+                        HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                        LainnyaMenuRow(
+                            icon = Icons.Default.Logout,
+                            tint = MaterialTheme.colorScheme.error,
+                            title = tr("Keluar Akun", "Sign Out"),
+                            subtitle = emailAkun,
+                            onClick = onKeluarAkun,
+                            trailing = {
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -1452,237 +1472,6 @@ private fun LainnyaMenuRow(
             }
         }
         trailing()
-    }
-}
-
-/**
- * Layar Mode Online (rancangan A): masuk/daftar dengan email, status
- * koneksi, dan sinkron manual. Bila Firebase belum dikonfigurasi
- * (google-services.json belum ada), layar hanya menjelaskan langkah
- * pengaturannya - aplikasi tetap berjalan offline.
- */
-@Composable
-fun ModeOnlineScreen(
-    terkonfigurasi: Boolean,
-    emailMasuk: String?,
-    sinkronTerakhir: Long,
-    sibuk: Boolean,
-    pesanStatus: String?,
-    googleSiap: Boolean,
-    onMasukGoogle: () -> Unit,
-    onResetSandi: (String) -> Unit,
-    onMasuk: (String, String) -> Unit,
-    onDaftar: (String, String) -> Unit,
-    onKeluar: () -> Unit,
-    onSinkron: () -> Unit,
-    onBack: () -> Unit
-) {
-    var email by remember { mutableStateOf("") }
-    var kataSandi by remember { mutableStateOf("") }
-    val masukanSah = email.contains("@") && kataSandi.length >= 6
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = tr("Kembali", "Back"))
-                }
-                Text(
-                    tr("Mode Online", "Online Mode"),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                if (!terkonfigurasi) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                tr("Belum dikonfigurasi", "Not configured"),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                tr("Mode online memakai Firebase. Pemilik aplikasi perlu " +
-                                    "membuat project Firebase, menaruh file " +
-                                    "google-services.json ke dalam aplikasi, lalu " +
-                                    "menyalakan login email dan database Firestore. " +
-                                    "Langkah lengkapnya ada di dokumen ONLINE.md di repo. " +
-                                    "Selama belum diatur, aplikasi berjalan offline " +
-                                    "seperti biasa dan tidak ada yang berubah.",
-                                    "Online mode uses Firebase. The app owner needs to " +
-                                    "create a Firebase project, place the " +
-                                    "google-services.json file in the app, then enable " +
-                                    "email sign-in and the Firestore database. The full " +
-                                    "steps are in the ONLINE.md document in the repo. " +
-                                    "Until it is set up, the app runs offline as usual " +
-                                    "and nothing changes."),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else if (emailMasuk == null) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                tr("Masuk untuk menyalakan sinkronisasi", "Sign in to turn on sync"),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                tr("Data tetap tersimpan di HP ini; salinannya " +
-                                    "tersinkron ke akunmu supaya tidak hilang " +
-                                    "saat ganti HP.",
-                                    "Data stays on this phone; a copy syncs to your " +
-                                    "account so it is not lost when you change phones."),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            if (googleSiap) {
-                                Button(
-                                    onClick = onMasukGoogle,
-                                    enabled = !sibuk,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.White,
-                                        contentColor = Color(0xFF1F1F1F)
-                                    ),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    LogoGoogle(modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(tr("Masuk dengan Google", "Sign in with Google"))
-                                }
-                                Spacer(Modifier.height(16.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    HorizontalDivider(modifier = Modifier.weight(1f))
-                                    Text(
-                                        tr("  atau pakai email  ", "  or use email  "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    HorizontalDivider(modifier = Modifier.weight(1f))
-                                }
-                                Spacer(Modifier.height(16.dp))
-                            }
-                            OutlinedTextField(
-                                value = email,
-                                onValueChange = { email = it },
-                                label = { Text("Email") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(Modifier.height(10.dp))
-                            OutlinedTextField(
-                                value = kataSandi,
-                                onValueChange = { kataSandi = it },
-                                label = { Text(tr("Kata sandi (min. 6 karakter)", "Password (min. 6 characters)")) },
-                                singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(Modifier.height(14.dp))
-                            Button(
-                                onClick = { onMasuk(email, kataSandi) },
-                                enabled = !sibuk && masukanSah,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text(if (sibuk) tr("Memproses...", "Working...") else tr("Masuk", "Sign In")) }
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = { onDaftar(email, kataSandi) },
-                                enabled = !sibuk && masukanSah,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text(tr("Daftar Akun Baru", "Create Account")) }
-                            TextButton(
-                                onClick = { onResetSandi(email) },
-                                enabled = !sibuk && email.contains("@"),
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text(tr("Lupa kata sandi?", "Forgot password?")) }
-                        }
-                    }
-                } else {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                tr("Terhubung", "Connected"),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                emailMasuk,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                if (sinkronTerakhir > 0L) {
-                                    tr("Sinkron terakhir: ", "Last synced: ") + formatTanggalWaktu(sinkronTerakhir, LocalBahasa.current)
-                                } else {
-                                    tr("Belum pernah sinkron", "Never synced")
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(14.dp))
-                            Button(
-                                onClick = onSinkron,
-                                enabled = !sibuk,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text(if (sibuk) tr("Menyinkronkan...", "Syncing...") else tr("Sinkronkan Sekarang", "Sync Now")) }
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = onKeluar,
-                                enabled = !sibuk,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text(tr("Keluar", "Sign Out")) }
-                        }
-                    }
-                }
-                if (pesanStatus != null) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        pesanStatus,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    tr("Sinkron berjalan otomatis setiap ada perubahan dan berkala " +
-                        "tiap beberapa jam saat ada internet. Konflik data " +
-                        "diselesaikan dengan aturan: yang terakhir diubah yang menang.",
-                        "Sync runs automatically whenever data changes and " +
-                        "periodically every few hours while online. Data " +
-                        "conflicts resolve by one rule: the last change wins."),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(24.dp))
-            }
-        }
     }
 }
 
