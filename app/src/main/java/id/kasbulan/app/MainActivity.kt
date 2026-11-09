@@ -7,6 +7,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -318,7 +325,16 @@ fun KasBulananApp(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when (tab) {
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = {
+                    val arah = if (targetState > initialState) 1 else -1
+                    (slideInHorizontally(tween(300)) { lebar -> arah * lebar / 5 } + fadeIn(tween(300))) togetherWith
+                        (slideOutHorizontally(tween(300)) { lebar -> -arah * lebar / 5 } + fadeOut(tween(300)))
+                },
+                label = "pindahTab"
+            ) { tabTampil ->
+            when (tabTampil) {
                 0 -> if (showRekapHariIni && bulanBerjalan != null) {
                     RekapHariIniScreen(
                         bulan = bulanBerjalan,
@@ -378,6 +394,7 @@ fun KasBulananApp(
                     onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
                     onTentang = { showTentang = true }
                 )
+            }
             }
             if (showForm && bulanBerjalan != null) {
                 CatatTransaksiScreen(
