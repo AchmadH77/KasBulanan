@@ -200,7 +200,8 @@ fun KasBulananApp(
     }
 
     // ---- Mode Online (lapisan opsional, docs/ONLINE.md) ----
-    var showOnline by remember { mutableStateOf(false) }
+    var showInfoOnline by remember { mutableStateOf(false) }
+    var syncManual by remember { mutableStateOf(false) }
     val onlineSiap = remember { FirebaseKit.siap(context) }
     var emailOnline by remember {
         mutableStateOf(if (onlineSiap) FirebaseKit.emailMasuk() else null)
@@ -243,6 +244,10 @@ fun KasBulananApp(
                 }
                 HasilSync.BelumMasuk -> pesanOnline = teks(bahasa, "Belum masuk", "Not signed in")
                 HasilSync.BelumDikonfigurasi -> pesanOnline = teks(bahasa, "Firebase belum dikonfigurasi", "Firebase is not configured")
+            }
+            if (syncManual) {
+                pesan = pesanOnline
+                syncManual = false
             }
             onlineSibuk = false
         }
@@ -411,7 +416,6 @@ fun KasBulananApp(
     }
 
     BackHandler(enabled = showRekapHariIni) { showRekapHariIni = false }
-    BackHandler(enabled = showOnline) { showOnline = false }
     BackHandler(enabled = showForm) { showForm = false }
 
     CompositionLocalProvider(LocalBahasa provides bahasa) {
@@ -433,7 +437,7 @@ fun KasBulananApp(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (!showForm && !showOnline) {
+            if (!showForm) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -469,7 +473,7 @@ fun KasBulananApp(
             }
         },
         floatingActionButton = {
-            if (tab == 0 && bulanBerjalan != null && !showRekapHariIni && !showForm && !showOnline) {
+            if (tab == 0 && bulanBerjalan != null && !showRekapHariIni && !showForm) {
                 ExtendedFloatingActionButton(
                     onClick = { bukaForm(null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -507,7 +511,12 @@ fun KasBulananApp(
                     transaksi = transaksiList,
                     namaApotek = namaApotek,
                     statusSync = statusSync,
-                    onBukaOnline = { showOnline = true },
+                    onBukaOnline = {
+                        when {
+                            emailOnline != null -> { syncManual = true; jalankanSync() }
+                            onlineSiap -> lewatiLogin = false
+                        }
+                    },
                     onMulaiBulanIni = {
                         scope.launch {
                             val ym = YearMonth.now()
@@ -553,38 +562,34 @@ fun KasBulananApp(
                     },
                     onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
                     onTentang = { showTentang = true },
-                    statusOnline = when {
+                    subjudulSync = when {
                         !onlineSiap -> tr("Belum dikonfigurasi", "Not configured")
-                        emailOnline != null -> tr("Terhubung: ", "Connected: ") + emailOnline
+                        emailOnline != null -> if (syncTerakhir > 0L) {
+                            tr("Terhubung: ", "Connected: ") + emailOnline + " - " +
+                                tr("sinkron ", "synced ") + formatTanggalWaktu(syncTerakhir)
+                        } else {
+                            tr("Terhubung: ", "Connected: ") + emailOnline
+                        }
                         else -> tr("Masuk untuk sinkron otomatis", "Sign in for automatic sync")
                     },
-                    onModeOnline = { showOnline = true },
+                    onBarisSync = {
+                        when {
+                            emailOnline != null -> { syncManual = true; jalankanSync() }
+                            onlineSiap -> lewatiLogin = false
+                            else -> showInfoOnline = true
+                        }
+                    },
+                    emailAkun = emailOnline,
+                    onKeluarAkun = {
+                        FirebaseKit.keluar()
+                        emailOnline = null
+                        statusSync = StatusSync.BELUM_MASUK
+                        pesan = teks(bahasa, "Sudah keluar - data di HP ini tidak berubah", "Signed out - the data on this phone is unchanged")
+                    },
                     bahasa = bahasa,
                     onGantiBahasa = onBahasaChange
                 )
             }
-            }
-            if (showOnline) {
-                ModeOnlineScreen(
-                    terkonfigurasi = onlineSiap,
-                    emailMasuk = emailOnline,
-                    sinkronTerakhir = syncTerakhir,
-                    sibuk = onlineSibuk,
-                    pesanStatus = pesanOnline,
-                    googleSiap = googleSiap,
-                    onMasukGoogle = { aksiMasukGoogle() },
-                    onResetSandi = { aksiResetSandi(it) },
-                    onMasuk = { email, sandi -> aksiMasuk(email, sandi) },
-                    onDaftar = { email, sandi -> aksiDaftar(email, sandi) },
-                    onKeluar = {
-                        FirebaseKit.keluar()
-                        emailOnline = null
-                        statusSync = StatusSync.BELUM_MASUK
-                        pesanOnline = teks(bahasa, "Sudah keluar - data di HP ini tidak berubah", "Signed out - the data on this phone is unchanged")
-                    },
-                    onSinkron = { jalankanSync() },
-                    onBack = { showOnline = false }
-                )
             }
             if (showForm && bulanBerjalan != null) {
                 CatatTransaksiScreen(
@@ -642,6 +647,23 @@ fun KasBulananApp(
     }
     if (showTentang) {
         TentangDialog(onDismiss = { showTentang = false })
+    }
+    if (showInfoOnline) {
+        AlertDialog(
+            onDismissRequest = { showInfoOnline = false },
+            title = { Text(tr("Sinkronisasi Online", "Online Sync")) },
+            text = {
+                Text(
+                    tr(
+                        "Sinkronisasi memakai Firebase. Pemilik aplikasi perlu membuat project Firebase, menaruh file google-services.json ke dalam aplikasi, lalu menyalakan login email dan database Firestore. Selama belum diatur, aplikasi berjalan offline seperti biasa dan tidak ada yang berubah.",
+                        "Sync uses Firebase. The app owner needs to create a Firebase project, place the google-services.json file in the app, then enable email sign-in and the Firestore database. Until it is set up, the app runs offline as usual and nothing changes."
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfoOnline = false }) { Text(tr("Tutup", "Close")) }
+            }
+        )
     }
     pendingRestore?.let { data ->
         RestoreConfirmDialog(
