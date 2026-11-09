@@ -41,11 +41,35 @@ data class SaldoKas(val tunai: Long, val qris: Long) {
 }
 
 /**
- * Saldo selalu HASIL HITUNG: saldo awal bulan ditambah semua catatan
- * bulan itu. Transfer menggeser uang antar dompet, total tidak berubah.
+ * Saldo selalu HASIL HITUNG dari SELURUH catatan semua bulan - tidak ada
+ * saldo awal yang diisi. Transfer menggeser uang antar dompet, total
+ * tidak berubah.
  */
-fun hitungSaldo(bulan: BulanKas, transaksi: List<TransaksiKas>): SaldoKas {
-    var saldo = SaldoKas(bulan.saldoAwalTunai, bulan.saldoAwalQris)
+fun hitungSaldo(transaksi: List<TransaksiKas>): SaldoKas {
+    var saldo = SaldoKas(0, 0)
+    for (t in transaksi) {
+        saldo = terapkanSaldo(saldo, t)
+    }
+    return saldo
+}
+
+/** Saldo pada akhir bulan-bulan SEBELUM bulan ini (= "saldo awal" bulan ini, murni hasil hitung). */
+fun saldoAwalBulan(bulan: BulanKas, bulanList: List<BulanKas>, transaksi: List<TransaksiKas>): SaldoKas {
+    val idSebelumnya = bulanList
+        .filter { it.tahun < bulan.tahun || (it.tahun == bulan.tahun && it.bulan < bulan.bulan) }
+        .map { it.id }
+        .toSet()
+    var saldo = SaldoKas(0, 0)
+    for (t in transaksi) {
+        if (t.bulanId !in idSebelumnya) continue
+        saldo = terapkanSaldo(saldo, t)
+    }
+    return saldo
+}
+
+/** Saldo pada akhir bulan ini: saldo awal bulan ditambah catatan bulan ini sendiri. */
+fun saldoAkhirBulan(bulan: BulanKas, bulanList: List<BulanKas>, transaksi: List<TransaksiKas>): SaldoKas {
+    var saldo = saldoAwalBulan(bulan, bulanList, transaksi)
     for (t in transaksi) {
         if (t.bulanId != bulan.id) continue
         saldo = terapkanSaldo(saldo, t)
@@ -53,11 +77,10 @@ fun hitungSaldo(bulan: BulanKas, transaksi: List<TransaksiKas>): SaldoKas {
     return saldo
 }
 
-/** Saldo pada AKHIR satu tanggal: hanya catatan bulan itu sampai tanggal tersebut yang dihitung. */
-fun saldoAkhirHari(bulan: BulanKas, transaksi: List<TransaksiKas>, tanggal: LocalDate): SaldoKas {
-    var saldo = SaldoKas(bulan.saldoAwalTunai, bulan.saldoAwalQris)
+/** Saldo pada AKHIR satu tanggal: seluruh catatan sampai tanggal tersebut, lintas bulan. */
+fun saldoAkhirHari(transaksi: List<TransaksiKas>, tanggal: LocalDate): SaldoKas {
+    var saldo = SaldoKas(0, 0)
     for (t in transaksi) {
-        if (t.bulanId != bulan.id) continue
         if (epochToLocalDate(t.epoch).isAfter(tanggal)) continue
         saldo = terapkanSaldo(saldo, t)
     }
@@ -112,16 +135,17 @@ fun ringkasanBulan(transaksi: List<TransaksiKas>, bulanId: Long): RingkasanBulan
 }
 
 /** Teks laporan satu bulan untuk dibagikan (WhatsApp dan lain-lain). */
-fun laporanText(bulan: BulanKas, namaApotek: String, transaksi: List<TransaksiKas>): String {
-    val saldo = hitungSaldo(bulan, transaksi)
+fun laporanText(bulan: BulanKas, namaApotek: String, bulanList: List<BulanKas>, transaksi: List<TransaksiKas>): String {
+    val saldoAwal = saldoAwalBulan(bulan, bulanList, transaksi)
+    val saldo = saldoAkhirBulan(bulan, bulanList, transaksi)
     val ringkasan = ringkasanBulan(transaksi, bulan.id)
     val sb = StringBuilder()
     sb.append("Laporan Kas Bulanan - ").append(bulanLabel(bulan.tahun, bulan.bulan)).append('\n')
     if (namaApotek.isNotBlank()) sb.append(namaApotek).append('\n')
     sb.append("Status: ").append(if (bulan.status == STATUS_DITUTUP) "Ditutup" else "Berjalan").append("\n\n")
-    sb.append("Saldo Awal: ").append(formatRupiah(bulan.saldoAwalTunai + bulan.saldoAwalQris))
-        .append(" (Tunai ").append(formatRupiah(bulan.saldoAwalTunai))
-        .append(" - QRIS ").append(formatRupiah(bulan.saldoAwalQris)).append(")\n")
+    sb.append("Saldo Awal: ").append(formatRupiah(saldoAwal.total))
+        .append(" (Tunai ").append(formatRupiah(saldoAwal.tunai))
+        .append(" - QRIS ").append(formatRupiah(saldoAwal.qris)).append(")\n")
     sb.append("Total Masuk: ").append(formatRupiah(ringkasan.totalMasuk)).append('\n')
     sb.append("Total Keluar: ").append(formatRupiah(ringkasan.totalKeluar)).append('\n')
     sb.append("Saldo Akhir: ").append(formatRupiah(saldo.total))

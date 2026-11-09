@@ -221,9 +221,8 @@ fun BerandaTab(
     labelBulanBerikutnya: String?,
     transaksi: List<TransaksiKas>,
     namaApotek: String,
-    onIsiSaldoAwal: () -> Unit,
+    onMulaiBulanIni: () -> Unit,
     onBukaBulanBerikutnya: () -> Unit,
-    onEditSaldoAwal: () -> Unit,
     onTransfer: () -> Unit,
     onRekapHariIni: () -> Unit,
     onTransaksiClick: (TransaksiKas) -> Unit
@@ -253,18 +252,17 @@ fun BerandaTab(
                         if (bulanTerakhir == null) {
                             Text("Mulai buku kas pertamamu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
-                                "Isi saldo awal bulan ini - uang tunai di laci dan saldo QRIS di rekening - lalu mulai catat pemasukan dan pengeluaran apotekmu.",
+                                "Catat pemasukan dan pengeluaran apotekmu mulai hari ini. Saldo dihitung otomatis dari catatanmu - tidak ada saldo awal yang perlu diisi.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Button(onClick = onIsiSaldoAwal, modifier = Modifier.fillMaxWidth()) {
-                                Text("Isi Saldo Awal Bulan Ini")
+                            Button(onClick = onMulaiBulanIni, modifier = Modifier.fillMaxWidth()) {
+                                Text("Mulai Bulan Ini")
                             }
                         } else {
                             Text("Semua bulan sudah ditutup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
-                                "Buka bulan berikutnya untuk melanjutkan pencatatan. Saldo awalnya otomatis dari saldo akhir " +
-                                    bulanLabel(bulanTerakhir.tahun, bulanTerakhir.bulan) + ".",
+                                "Buka bulan berikutnya untuk melanjutkan pencatatan. Saldo berjalan terus dari seluruh catatanmu.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -276,7 +274,7 @@ fun BerandaTab(
                 }
             }
         } else {
-            val saldo = hitungSaldo(bulan, transaksi)
+            val saldo = hitungSaldo(transaksi)
             val ringkasan = ringkasanBulan(transaksi, bulan.id)
             val terakhir = transaksi
                 .filter { it.bulanId == bulan.id }
@@ -366,11 +364,10 @@ fun BerandaTab(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Saldo awal: " + formatRupiah(bulan.saldoAwalTunai + bulan.saldoAwalQris),
+                        "Saldo berjalan dari seluruh catatan",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    TextButton(onClick = onEditSaldoAwal) { Text("Ubah") }
                     Spacer(Modifier.weight(1f))
                     OutlinedButton(onClick = onTransfer) {
                         Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -485,7 +482,7 @@ fun RekapHariIniScreen(
     val context = LocalContext.current
     val hariIni = LocalDate.now()
     val ringkasan = ringkasanHari(hariIni, transaksi)
-    val saldoAkhir = saldoAkhirHari(bulan, transaksi, hariIni)
+    val saldoAkhir = saldoAkhirHari(transaksi, hariIni)
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -682,7 +679,7 @@ fun RiwayatTab(
     if (bulanList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(
-                "Belum ada data. Isi saldo awal dari tab Beranda.",
+                "Belum ada data. Mulai bulan ini dari tab Beranda.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -751,7 +748,7 @@ fun LaporanTab(
     if (bulanList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(
-                "Belum ada data. Isi saldo awal dari tab Beranda.",
+                "Belum ada data. Mulai bulan ini dari tab Beranda.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -762,7 +759,8 @@ fun LaporanTab(
     val selected = bulanList.firstOrNull { it.id == selectedId }
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
         ?: bulanList.last()
-    val saldo = hitungSaldo(selected, transaksi)
+    val saldoAwal = saldoAwalBulan(selected, bulanList, transaksi)
+    val saldo = saldoAkhirBulan(selected, bulanList, transaksi)
     val ringkasan = ringkasanBulan(transaksi, selected.id)
     val pendapatanHarian = pendapatanPerHari(transaksi, selected.id)
     val ditutup = selected.status == STATUS_DITUTUP
@@ -778,7 +776,7 @@ fun LaporanTab(
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text("Saldo Awal", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.weight(1f))
-                        Text(formatRupiah(selected.saldoAwalTunai + selected.saldoAwalQris), fontWeight = FontWeight.SemiBold)
+                        Text(formatRupiah(saldoAwal.total), fontWeight = FontWeight.SemiBold)
                     }
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text("Total Masuk", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -952,7 +950,7 @@ fun LaporanTab(
         item {
             Button(
                 onClick = {
-                    val teks = laporanText(selected, namaApotek, transaksi)
+                    val teks = laporanText(selected, namaApotek, bulanList, transaksi)
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, teks)
@@ -985,7 +983,7 @@ fun LaporanTab(
                         Text("Tutup Buku " + bulanLabel(selected.tahun, selected.bulan))
                     }
                     Text(
-                        "Menutup buku mengunci bulan ini dan membuka bulan berikutnya dengan saldo awal dari saldo akhir bulan ini.",
+                        "Menutup buku mengunci bulan ini dan membuka bulan berikutnya. Saldo berjalan terus dari seluruh catatan.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1004,8 +1002,6 @@ fun LainnyaTab(
     onNamaApotekChange: (String) -> Unit,
     dark: Boolean,
     onToggleDark: (Boolean) -> Unit,
-    bulanBerjalan: BulanKas?,
-    onEditSaldoAwal: () -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
     onTentang: () -> Unit
@@ -1053,24 +1049,6 @@ fun LainnyaTab(
                     namaDraft = namaApotek
                     editNama = true
                 }
-            )
-        }
-        item {
-            ListItem(
-                headlineContent = { Text("Saldo Awal Bulan Berjalan") },
-                supportingContent = {
-                    Text(
-                        if (bulanBerjalan != null) {
-                            bulanLabel(bulanBerjalan.tahun, bulanBerjalan.bulan) +
-                                " - Tunai " + formatRupiah(bulanBerjalan.saldoAwalTunai) +
-                                " - QRIS " + formatRupiah(bulanBerjalan.saldoAwalQris)
-                        } else {
-                            "Tidak ada bulan berjalan"
-                        }
-                    )
-                },
-                leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) },
-                modifier = if (bulanBerjalan != null) Modifier.clickable(onClick = onEditSaldoAwal) else Modifier
             )
         }
         item {

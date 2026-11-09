@@ -136,8 +136,6 @@ fun KasBulananApp(
     var formInitial by remember { mutableStateOf<TransaksiKas?>(null) }
     var showTransfer by remember { mutableStateOf(false) }
     var transferInitial by remember { mutableStateOf<TransaksiKas?>(null) }
-    var showSaldoAwal by remember { mutableStateOf(false) }
-    var saldoAwalUntukBerjalan by remember { mutableStateOf(false) }
     var tutupTarget by remember { mutableStateOf<BulanKas?>(null) }
     var showTentang by remember { mutableStateOf(false) }
     var pendingRestore by remember { mutableStateOf<BackupHelper.BackupData?>(null) }
@@ -261,29 +259,23 @@ fun KasBulananApp(
                     labelBulanBerikutnya = labelBerikutnya,
                     transaksi = transaksiList,
                     namaApotek = namaApotek,
-                    onIsiSaldoAwal = {
-                        saldoAwalUntukBerjalan = false
-                        showSaldoAwal = true
+                    onMulaiBulanIni = {
+                        scope.launch {
+                            val ym = YearMonth.now()
+                            repository.insertBulan(
+                                BulanKas(tahun = ym.year, bulan = ym.monthValue)
+                            )
+                        }
                     },
                     onBukaBulanBerikutnya = {
                         bulanTerakhir?.let { terakhir ->
                             scope.launch {
-                                val saldo = hitungSaldo(terakhir, transaksiList)
                                 val ym = YearMonth.of(terakhir.tahun, terakhir.bulan).plusMonths(1)
                                 repository.insertBulan(
-                                    BulanKas(
-                                        tahun = ym.year,
-                                        bulan = ym.monthValue,
-                                        saldoAwalTunai = saldo.tunai,
-                                        saldoAwalQris = saldo.qris
-                                    )
+                                    BulanKas(tahun = ym.year, bulan = ym.monthValue)
                                 )
                             }
                         }
-                    },
-                    onEditSaldoAwal = {
-                        saldoAwalUntukBerjalan = true
-                        showSaldoAwal = true
                     },
                     onTransfer = {
                         transferInitial = null
@@ -299,11 +291,6 @@ fun KasBulananApp(
                     onNamaApotekChange = onNamaApotekChange,
                     dark = dark,
                     onToggleDark = onToggleDark,
-                    bulanBerjalan = bulanBerjalan,
-                    onEditSaldoAwal = {
-                        saldoAwalUntukBerjalan = true
-                        showSaldoAwal = true
-                    },
                     onBackup = { backupLauncher.launch("kasbulanan-backup.json") },
                     onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
                     onTentang = { showTentang = true }
@@ -346,41 +333,10 @@ fun KasBulananApp(
             }
         )
     }
-    if (showSaldoAwal) {
-        val berjalan = bulanBerjalan
-        SaldoAwalDialog(
-            judul = if (saldoAwalUntukBerjalan && berjalan != null) {
-                "Saldo Awal " + bulanLabel(berjalan.tahun, berjalan.bulan)
-            } else {
-                val ym = YearMonth.now()
-                "Saldo Awal " + bulanLabel(ym.year, ym.monthValue)
-            },
-            initialTunai = if (saldoAwalUntukBerjalan) berjalan?.saldoAwalTunai ?: 0 else 0,
-            initialQris = if (saldoAwalUntukBerjalan) berjalan?.saldoAwalQris ?: 0 else 0,
-            onDismiss = { showSaldoAwal = false },
-            onSave = { tunai, qris ->
-                scope.launch {
-                    if (saldoAwalUntukBerjalan && berjalan != null) {
-                        repository.updateSaldoAwal(berjalan, tunai, qris)
-                    } else if (bulanList.isEmpty()) {
-                        val ym = YearMonth.now()
-                        repository.insertBulan(
-                            BulanKas(
-                                tahun = ym.year,
-                                bulan = ym.monthValue,
-                                saldoAwalTunai = tunai,
-                                saldoAwalQris = qris
-                            )
-                        )
-                    }
-                }
-                showSaldoAwal = false
-            }
-        )
-    }
     tutupTarget?.let { target ->
         TutupBukuDialog(
             bulan = target,
+            bulanList = bulanList,
             transaksi = transaksiList,
             onDismiss = { tutupTarget = null },
             onConfirm = {
@@ -718,53 +674,17 @@ fun TransferDialog(
     }
 }
 
-// ---------- Dialog saldo awal ----------
-
-@Composable
-fun SaldoAwalDialog(
-    judul: String,
-    initialTunai: Long,
-    initialQris: Long,
-    onDismiss: () -> Unit,
-    onSave: (Long, Long) -> Unit
-) {
-    var tunaiRaw by remember { mutableStateOf(if (initialTunai > 0) initialTunai.toString() else "") }
-    var qrisRaw by remember { mutableStateOf(if (initialQris > 0) initialQris.toString() else "") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(judul) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Uang yang benar-benar ada saat bulan dibuka: tunai di laci dan saldo QRIS di rekening.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                MoneyField("Saldo awal Tunai (laci)", tunaiRaw) { tunaiRaw = it }
-                MoneyField("Saldo awal QRIS (rekening)", qrisRaw) { qrisRaw = it }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onSave(tunaiRaw.toLongOrNull() ?: 0L, qrisRaw.toLongOrNull() ?: 0L)
-            }) { Text("Simpan") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
-        }
-    )
-}
-
 // ---------- Dialog tutup buku ----------
 
 @Composable
 fun TutupBukuDialog(
     bulan: BulanKas,
+    bulanList: List<BulanKas>,
     transaksi: List<TransaksiKas>,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    val saldo = hitungSaldo(bulan, transaksi)
+    val saldo = saldoAkhirBulan(bulan, bulanList, transaksi)
     val ringkasan = ringkasanBulan(transaksi, bulan.id)
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -783,7 +703,7 @@ fun TutupBukuDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "Setelah ditutup, bulan ini terkunci dan tidak bisa diubah. Bulan berikutnya dibuka dengan saldo awal dari saldo akhir di atas.",
+                    "Setelah ditutup, bulan ini terkunci dan tidak bisa diubah. Bulan berikutnya dibuka; saldo berjalan terus dari seluruh catatan.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
