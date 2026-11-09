@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -331,12 +333,17 @@ fun TeksRupiahAnimasi(
 }
 
 @Composable
+/** Keadaan sinkronisasi online untuk ikon status di Beranda. */
+enum class StatusSync { NONAKTIF, BELUM_MASUK, PROSES, BERHASIL, GAGAL }
+
 fun BerandaTab(
     bulan: BulanKas?,
     bulanTerakhir: BulanKas?,
     labelBulanBerikutnya: String?,
     transaksi: List<TransaksiKas>,
     namaApotek: String,
+    statusSync: StatusSync,
+    onBukaOnline: () -> Unit,
     onMulaiBulanIni: () -> Unit,
     onBukaBulanBerikutnya: () -> Unit,
     onTransfer: () -> Unit,
@@ -410,11 +417,43 @@ fun BerandaTab(
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Saldo Kas",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Saldo Kas",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (statusSync != StatusSync.NONAKTIF) {
+                                val ikonStatus = when (statusSync) {
+                                    StatusSync.BERHASIL -> Icons.Default.CloudDone
+                                    StatusSync.PROSES -> Icons.Default.CloudSync
+                                    else -> Icons.Default.CloudOff
+                                }
+                                val warnaStatus = when (statusSync) {
+                                    StatusSync.GAGAL -> MaterialTheme.colorScheme.error
+                                    StatusSync.BERHASIL -> Color.White
+                                    else -> MaterialTheme.colorScheme.onPrimaryContainer
+                                }
+                                val labelStatus = when (statusSync) {
+                                    StatusSync.BERHASIL -> "Sudah tersinkron"
+                                    StatusSync.PROSES -> "Sedang menyinkronkan"
+                                    StatusSync.GAGAL -> "Sinkron gagal"
+                                    else -> "Belum masuk"
+                                }
+                                IconButton(
+                                    onClick = onBukaOnline,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        ikonStatus,
+                                        contentDescription = labelStatus,
+                                        tint = warnaStatus,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                }
+                            }
+                        }
                         TeksRupiahAnimasi(
                             saldo.total,
                             MaterialTheme.typography.headlineMedium,
@@ -1397,6 +1436,9 @@ fun ModeOnlineScreen(
     sinkronTerakhir: Long,
     sibuk: Boolean,
     pesanStatus: String?,
+    googleSiap: Boolean,
+    onMasukGoogle: () -> Unit,
+    onResetSandi: (String) -> Unit,
     onMasuk: (String, String) -> Unit,
     onDaftar: (String, String) -> Unit,
     onKeluar: () -> Unit,
@@ -1501,6 +1543,19 @@ fun ModeOnlineScreen(
                                 enabled = !sibuk && masukanSah,
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Daftar Akun Baru") }
+                            if (googleSiap) {
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = onMasukGoogle,
+                                    enabled = !sibuk,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("Masuk dengan Google") }
+                            }
+                            TextButton(
+                                onClick = { onResetSandi(email) },
+                                enabled = !sibuk && email.contains("@"),
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Lupa kata sandi?") }
                         }
                     }
                 } else {
