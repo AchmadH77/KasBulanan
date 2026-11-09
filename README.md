@@ -1,6 +1,6 @@
 # KasBulanan
 
-[![Build APK](https://github.com/Achmadh7/KasBulanan/actions/workflows/build.yml/badge.svg)](https://github.com/Achmadh7/KasBulanan/actions/workflows/build.yml)
+[![Build APK](https://github.com/AchmadH77/KasBulanan/actions/workflows/build.yml/badge.svg)](https://github.com/AchmadH77/KasBulanan/actions/workflows/build.yml)
 
 A monthly cash book for pharmacies — an offline Android app for recording
 cash on a monthly rhythm: **open the month → record daily → close the book**.
