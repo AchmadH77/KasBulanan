@@ -19,8 +19,12 @@ double-count it.
   ever typed in directly, so the balance can never disagree with the history.
 - Running-month home: total cash balance + the Cash/QRIS breakdown, this
   month's income and expenses, latest transactions.
+- A daily layer: a "Kas Hari Ini" card on Home with today's totals and a
+  "Rekap Hari Ini" recap screen (per category and channel, closing balance
+  per channel, shareable as text).
 - History grouped per day with daily subtotals; a monthly Report with a
-  per-category breakdown and a share button.
+  per-category breakdown, an Income-per-Day section (sales only, summing
+  to the month's total revenue), and a share button.
 - Backup & restore as a single JSON file, with a preview of the file's
   contents before any data is replaced. No account, no server, no internet.
 - Database safety net: an automatic copy of the database file right before

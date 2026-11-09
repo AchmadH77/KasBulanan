@@ -3,6 +3,23 @@
 All notable changes to KasBulanan are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- A daily layer on top of the monthly book: a "Kas Hari Ini" (Today's Cash)
+  card on Home showing today's income and expense totals, yesterday's
+  totals for comparison, and a one-tap path to the day's recap.
+- A "Rekap Hari Ini" (Today's Recap) screen: the day's income and expenses
+  broken down per category and channel, the day's transfers, and the
+  closing balance per channel at the end of the day - shareable as text,
+  like the monthly report.
+- "Pendapatan per Hari" (Income per Day) in the monthly Report: one row
+  per day with that day's Penjualan (Sales) income and a proportional bar,
+  the best day and today marked, summing to a Total Pendapatan row. Only
+  sales count as income here; Tambahan Modal (Added Capital) is money in,
+  but not revenue, and is excluded.
+
 ## [1.0.0] - 2026-11-09
 
 ### Added
