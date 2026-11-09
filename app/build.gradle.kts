@@ -6,6 +6,13 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// Firebase is an OPTIONAL layer (online sync, see docs/ONLINE.md): the
+// google-services plugin only applies when google-services.json sits in
+// this module. Without the file the app builds and runs fully offline.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 // AGP 9 has built-in Kotlin support, so the org.jetbrains.kotlin.android
 // plugin is no longer applied; the JVM target moves to this block.
 kotlin {
@@ -100,6 +107,15 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-tooling-preview")
+
+    // Online sync (Firebase Auth + Firestore) - guarded at runtime: when
+    // Firebase is not configured the online layer stays dormant and the
+    // app behaves exactly like the offline build.
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation("junit:junit:4.13.2")
     // Real org.json for BackupHelper unit tests (Android provides it on device).
