@@ -12,9 +12,11 @@ its list of `TransaksiKas` entries.
 
 Domain rules that must not be broken:
 
-1. **The balance is always computed**, never typed in directly:
-   balance = the month's opening balance + all of that month's records
-   (`hitungSaldo`).
+1. **The balance is always computed**, never typed in directly - and
+   there is no opening balance at all: balance = the sum of ALL records
+   across all months, per channel (`hitungSaldo`). A month's opening
+   figure in the Report is itself computed as the previous month's
+   closing balance (`saldoAwalBulan` / `saldoAkhirBulan`).
 2. **Money is separated per channel** — TUNAI (Cash, the drawer) and QRIS
    (the bank account) — in the running balance, the closing balance, and
    the close-book archive.
@@ -28,9 +30,8 @@ Domain rules that must not be broken:
 ```
 app/src/main/java/id/kasbulan/app/
 ├── MainActivity.kt   Activity + app shell (4 tabs) and every dialog:
-│                     transaction form, transfer, opening balance,
-│                     close book, about, restore confirmation; the
-│                     backup file pickers.
+│                     transaction form, transfer, close book, about,
+│                     restore confirmation; the backup file pickers.
 ├── Screens.kt        The four tabs: BerandaTab (Home), RiwayatTab
 │                     (History), LaporanTab (Report), LainnyaTab (More),
 │                     plus the transaction row and MoneyField components.
@@ -60,8 +61,9 @@ Screen and type names stay Indonesian in the code (`BerandaTab`,
 2. Freeze them onto the month row (`status = DITUTUP`, `ditutupPada`,
    `totalMasukFinal`, `totalKeluarFinal`, `saldoAkhirTunaiFinal`,
    `saldoAkhirQrisFinal`).
-3. Insert the next month with opening balances equal to the closing
-   balances, per channel.
+3. Insert the next month (empty, `status = BERJALAN`). The balance is
+   continuous, so nothing is carried over - the new month simply
+   continues the same running balance.
 
 Because steps 1–3 are atomic, the app dying mid-process can never leave a
 half-closed month behind.
