@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "49722118171",
+    "project_id": "kasbulanan-6171e",
+    "storage_bucket": "kasbulanan-6171e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49722118171:android:c33d8ccea08ddfee2a68be",
+        "android_client_info": {
+          "package_name": "id.kasbulan.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxL9iEy1pvuNjD33i6YIorMf-10hNwEME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
