@@ -792,14 +792,16 @@ fun RekapHariIniScreen(
             }
         }
         item {
+            val bahasaAktif = LocalBahasa.current
+            val judulBagikan = tr("Bagikan Rekap", "Share Recap")
             Button(
                 onClick = {
-                    val teks = rekapHariText(namaApotek, hariIni, ringkasan, saldoAkhir)
+                    val teks = rekapHariText(namaApotek, hariIni, ringkasan, saldoAkhir, bahasaAktif)
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, teks)
                     }
-                    context.startActivity(Intent.createChooser(intent, tr("Bagikan Rekap", "Share Recap")))
+                    context.startActivity(Intent.createChooser(intent, judulBagikan))
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
