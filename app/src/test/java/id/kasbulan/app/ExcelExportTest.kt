@@ -89,6 +89,12 @@ class ExcelExportTest {
         assertEquals("TOTAL", total.getCell(0).stringCellValue)
         assertEquals(100_000.0, total.getCell(5).numericCellValue, 0.01)
         assertEquals(40_000.0, total.getCell(6).numericCellValue, 0.01)
+        // Baris SALDO AKHIR: saldo kontinu akhir November = 100rb - 40rb
+        val saldo = sheet.getRow(4)
+        assertEquals("SALDO AKHIR", saldo.getCell(0).stringCellValue)
+        assertEquals(60_000.0, saldo.getCell(6).numericCellValue, 0.01)
+        // Nominal memakai format desimal
+        assertEquals("#,##0.00", sheet.getRow(1).getCell(5).cellStyle.dataFormatString)
         wb.close()
     }
 
