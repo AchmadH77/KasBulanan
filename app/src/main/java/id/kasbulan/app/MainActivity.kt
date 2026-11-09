@@ -60,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,6 +74,7 @@ import androidx.compose.ui.window.Dialog
 import id.kasbulan.app.data.AppDatabase
 import id.kasbulan.app.data.BackupHelper
 import id.kasbulan.app.data.BulanKas
+import id.kasbulan.app.data.ExcelExporter
 import id.kasbulan.app.data.KasRepository
 import id.kasbulan.app.data.TransaksiKas
 import java.time.Instant
@@ -154,6 +156,38 @@ fun KasBulananApp(
         }
     }
 
+    val prefs = remember { context.getSharedPreferences("kasbulan_prefs", android.content.Context.MODE_PRIVATE) }
+    var lastBackupAt by remember { mutableLongStateOf(prefs.getLong("last_backup_at", 0L)) }
+    var lastBackupName by remember { mutableStateOf(prefs.getString("last_backup_name", "") ?: "") }
+    var lastBackupTanda by remember { mutableStateOf(prefs.getString("last_backup_tanda", "") ?: "") }
+    val tandaData = transaksiList.size.toString() + ":" + transaksiList.sumOf { it.nominal } + ":" + bulanList.size
+    val peringatanBackup = when {
+        lastBackupAt == 0L && transaksiList.isNotEmpty() -> "Belum pernah dibackup"
+        lastBackupAt > 0L && lastBackupTanda != tandaData -> "Ada perubahan sejak backup terakhir"
+        else -> null
+    }
+
+    val eksporLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    try {
+                        val bytes = ExcelExporter.buildWorkbook(bulanList, transaksiList)
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                        true
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+                pesan = if (ok) "Ekspor Excel tersimpan" else "Ekspor Excel gagal"
+            }
+        }
+    }
+
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -169,6 +203,27 @@ fun KasBulananApp(
                     } catch (e: Exception) {
                         false
                     }
+                }
+                if (ok) {
+                    val namaFile = withContext(Dispatchers.IO) {
+                        try {
+                            context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                                val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } ?: "kasbulanan-backup.json"
+                    val sekarang = System.currentTimeMillis()
+                    prefs.edit()
+                        .putLong("last_backup_at", sekarang)
+                        .putString("last_backup_name", namaFile)
+                        .putString("last_backup_tanda", tandaData)
+                        .apply()
+                    lastBackupAt = sekarang
+                    lastBackupName = namaFile
+                    lastBackupTanda = tandaData
                 }
                 pesan = if (ok) "Backup tersimpan" else "Backup gagal"
             }
@@ -299,7 +354,17 @@ fun KasBulananApp(
                     onNamaApotekChange = onNamaApotekChange,
                     dark = dark,
                     onToggleDark = onToggleDark,
+                    lastBackupAt = lastBackupAt,
+                    lastBackupName = lastBackupName,
+                    peringatanBackup = peringatanBackup,
                     onBackup = { backupLauncher.launch("kasbulanan-backup.json") },
+                    onEksporExcel = {
+                        if (bulanList.isEmpty()) {
+                            pesan = "Belum ada data untuk diekspor"
+                        } else {
+                            eksporLauncher.launch("kasbulanan-ekspor.xlsx")
+                        }
+                    },
                     onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
                     onTentang = { showTentang = true }
                 )
@@ -314,6 +379,9 @@ fun KasBulananApp(
                             if (t.id == 0L) repository.insertTransaksi(t) else repository.updateTransaksi(t)
                         }
                         showForm = false
+                    },
+                    onSaveAndAgain = { t ->
+                        scope.launch { repository.insertTransaksi(t) }
                     },
                     onDelete = { t ->
                         scope.launch { repository.deleteTransaksi(t) }
@@ -433,6 +501,7 @@ fun CatatTransaksiScreen(
     initial: TransaksiKas?,
     onBack: () -> Unit,
     onSave: (TransaksiKas) -> Unit,
+    onSaveAndAgain: ((TransaksiKas) -> Unit)? = null,
     onDelete: (TransaksiKas) -> Unit
 ) {
     var jenis by remember { mutableStateOf(initial?.jenis ?: JENIS_MASUK) }
@@ -443,12 +512,25 @@ fun CatatTransaksiScreen(
     var tanggal by remember { mutableStateOf(tanggalAwal(initial, bulan)) }
     var showDatePicker by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var jumlahTersimpanLagi by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(jenis) {
         val daftar = if (jenis == JENIS_MASUK) KATEGORI_MASUK else KATEGORI_KELUAR
         if (kategori !in daftar) kategori = daftar.first()
     }
     val nominal = nominalRaw.toLongOrNull() ?: 0L
     val daftarKategori = if (jenis == JENIS_MASUK) KATEGORI_MASUK else KATEGORI_KELUAR
+    fun buatTransaksi() = TransaksiKas(
+        id = initial?.id ?: 0,
+        bulanId = bulan.id,
+        jenis = jenis,
+        saluran = saluran,
+        saluranTujuan = null,
+        kategori = kategori,
+        nominal = nominal,
+        catatan = catatan.trim(),
+        epoch = epochDariTanggal(tanggal, initial)
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -532,26 +614,37 @@ fun CatatTransaksiScreen(
         ) {
             Button(
                 enabled = nominal > 0,
-                onClick = {
-                    onSave(
-                        TransaksiKas(
-                            id = initial?.id ?: 0,
-                            bulanId = bulan.id,
-                            jenis = jenis,
-                            saluran = saluran,
-                            saluranTujuan = null,
-                            kategori = kategori,
-                            nominal = nominal,
-                            catatan = catatan.trim(),
-                            epoch = epochDariTanggal(tanggal, initial)
-                        )
-                    )
-                },
+                onClick = { onSave(buatTransaksi()) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
                 Text("Simpan", style = MaterialTheme.typography.titleMedium)
+            }
+            if (initial == null && onSaveAndAgain != null) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    enabled = nominal > 0,
+                    onClick = {
+                        onSaveAndAgain(buatTransaksi())
+                        jumlahTersimpanLagi++
+                        nominalRaw = ""
+                        catatan = ""
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text("Simpan & Catat Lagi")
+                }
+                if (jumlahTersimpanLagi > 0) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        jumlahTersimpanLagi.toString() + " catatan tersimpan - lanjutkan berikutnya",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
             TextButton(onClick = onBack) { Text("Batal") }
             if (initial != null) {
