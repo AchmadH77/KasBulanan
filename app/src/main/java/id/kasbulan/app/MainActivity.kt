@@ -580,6 +580,8 @@ fun KasBulananApp(
                         }
                     },
                     emailAkun = emailOnline,
+                    onlineSiap = onlineSiap,
+                    syncTerakhir = syncTerakhir,
                     onKeluarAkun = {
                         FirebaseKit.keluar()
                         emailOnline = null
