@@ -50,6 +50,9 @@ connection.
 - When online mode is configured, the app opens on a sign-in gate with a
   guest pass ("Lewati — Pakai Tanpa Akun"), so the offline book is never
   locked behind an account.
+- Interface in Indonesian or English, switchable in the More tab. Only
+  the display changes: stored values (category names, the Excel template)
+  stay Indonesian.
 - Database safety net: an automatic copy of the database file right before
   an updated app is opened for the first time (max. 3 copies), on top of the
   manual backup.
