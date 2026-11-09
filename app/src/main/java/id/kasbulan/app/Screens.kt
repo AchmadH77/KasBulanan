@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -70,6 +71,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import id.kasbulan.app.data.BulanKas
 import id.kasbulan.app.data.TransaksiKas
@@ -1145,7 +1147,9 @@ fun LainnyaTab(
     onBackup: () -> Unit,
     onEksporExcel: () -> Unit,
     onRestore: () -> Unit,
-    onTentang: () -> Unit
+    onTentang: () -> Unit,
+    statusOnline: String,
+    onModeOnline: () -> Unit
 ) {
     var editNama by remember { mutableStateOf(false) }
     var namaDraft by remember { mutableStateOf("") }
@@ -1268,6 +1272,21 @@ fun LainnyaTab(
                             )
                         }
                     )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                    LainnyaMenuRow(
+                        icon = Icons.Default.CloudSync,
+                        tint = MaterialTheme.colorScheme.primary,
+                        title = "Mode Online",
+                        subtitle = statusOnline,
+                        onClick = onModeOnline,
+                        trailing = {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
                 }
             }
         }
@@ -1360,5 +1379,190 @@ private fun LainnyaMenuRow(
             }
         }
         trailing()
+    }
+}
+
+/**
+ * Layar Mode Online (rancangan A): masuk/daftar dengan email, status
+ * koneksi, dan sinkron manual. Bila Firebase belum dikonfigurasi
+ * (google-services.json belum ada), layar hanya menjelaskan langkah
+ * pengaturannya - aplikasi tetap berjalan offline.
+ */
+@Composable
+fun ModeOnlineScreen(
+    terkonfigurasi: Boolean,
+    emailMasuk: String?,
+    sinkronTerakhir: Long,
+    sibuk: Boolean,
+    pesanStatus: String?,
+    onMasuk: (String, String) -> Unit,
+    onDaftar: (String, String) -> Unit,
+    onKeluar: () -> Unit,
+    onSinkron: () -> Unit,
+    onBack: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var kataSandi by remember { mutableStateOf("") }
+    val masukanSah = email.contains("@") && kataSandi.length >= 6
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                }
+                Text(
+                    "Mode Online",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                if (!terkonfigurasi) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Belum dikonfigurasi",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Mode online memakai Firebase. Pemilik aplikasi perlu " +
+                                    "membuat project Firebase, menaruh file " +
+                                    "google-services.json ke dalam aplikasi, lalu " +
+                                    "menyalakan login email dan database Firestore. " +
+                                    "Langkah lengkapnya ada di dokumen ONLINE.md di repo. " +
+                                    "Selama belum diatur, aplikasi berjalan offline " +
+                                    "seperti biasa dan tidak ada yang berubah.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (emailMasuk == null) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Masuk untuk menyalakan sinkronisasi",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Data tetap tersimpan di HP ini; salinannya " +
+                                    "tersinkron ke akunmu supaya tidak hilang " +
+                                    "saat ganti HP.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = { Text("Email") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            OutlinedTextField(
+                                value = kataSandi,
+                                onValueChange = { kataSandi = it },
+                                label = { Text("Kata sandi (min. 6 karakter)") },
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            Button(
+                                onClick = { onMasuk(email, kataSandi) },
+                                enabled = !sibuk && masukanSah,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (sibuk) "Memproses..." else "Masuk") }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { onDaftar(email, kataSandi) },
+                                enabled = !sibuk && masukanSah,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Daftar Akun Baru") }
+                        }
+                    }
+                } else {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Terhubung",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                emailMasuk,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                if (sinkronTerakhir > 0L) {
+                                    "Sinkron terakhir: " + formatTanggalWaktu(sinkronTerakhir)
+                                } else {
+                                    "Belum pernah sinkron"
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            Button(
+                                onClick = onSinkron,
+                                enabled = !sibuk,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (sibuk) "Menyinkronkan..." else "Sinkronkan Sekarang") }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = onKeluar,
+                                enabled = !sibuk,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Keluar") }
+                        }
+                    }
+                }
+                if (pesanStatus != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        pesanStatus,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Sinkron berjalan otomatis setiap ada perubahan dan berkala " +
+                        "tiap beberapa jam saat ada internet. Konflik data " +
+                        "diselesaikan dengan aturan: yang terakhir diubah yang menang.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(24.dp))
+            }
+        }
     }
 }
