@@ -53,9 +53,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -273,6 +279,40 @@ fun PitaHeader(tabLabel: String, namaApotek: String, bulan: BulanKas?) {
 
 // ---------------- Beranda ----------------
 
+/**
+ * Teks rupiah yang angkanya berjalan (menghitung naik/turun) setiap kali
+ * nilainya berubah, misalnya setelah transaksi disimpan. Interpolasi
+ * memakai Long sehingga angka akhir selalu persis, tidak meleset karena
+ * pembulatan float.
+ */
+@Composable
+fun TeksRupiahAnimasi(
+    nilai: Long,
+    style: TextStyle,
+    color: Color,
+    fontWeight: FontWeight? = null,
+    awalan: String = ""
+) {
+    var tampil by remember { mutableLongStateOf(nilai) }
+    val gerak = remember { Animatable(0f) }
+    LaunchedEffect(nilai) {
+        val dari = tampil
+        if (dari != nilai) {
+            gerak.snapTo(0f)
+            gerak.animateTo(1f, tween(550, easing = FastOutSlowInEasing)) {
+                tampil = dari + ((nilai - dari).toDouble() * value).toLong()
+            }
+            tampil = nilai
+        }
+    }
+    Text(
+        awalan + formatRupiah(tampil),
+        style = style,
+        color = color,
+        fontWeight = fontWeight
+    )
+}
+
 @Composable
 fun BerandaTab(
     bulan: BulanKas?,
@@ -358,11 +398,11 @@ fun BerandaTab(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        Text(
-                            formatRupiah(saldo.total),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                        TeksRupiahAnimasi(
+                            saldo.total,
+                            MaterialTheme.typography.headlineMedium,
+                            Color.White,
+                            FontWeight.ExtraBold
                         )
                         Spacer(Modifier.height(10.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.35f))
@@ -370,11 +410,11 @@ fun BerandaTab(
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Tunai (laci)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                Text(formatRupiah(saldo.tunai), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                                TeksRupiahAnimasi(saldo.tunai, MaterialTheme.typography.titleSmall, Color.White, FontWeight.Bold)
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                                 Text("QRIS (rekening)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                Text(formatRupiah(saldo.qris), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                                TeksRupiahAnimasi(saldo.qris, MaterialTheme.typography.titleSmall, Color.White, FontWeight.Bold)
                             }
                         }
                     }
@@ -388,11 +428,12 @@ fun BerandaTab(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text("Masuk bulan ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                "+" + formatRupiah(ringkasan.totalMasuk),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                            TeksRupiahAnimasi(
+                                ringkasan.totalMasuk,
+                                MaterialTheme.typography.titleSmall,
+                                MaterialTheme.colorScheme.primary,
+                                FontWeight.Bold,
+                                awalan = "+"
                             )
                         }
                     }
@@ -402,11 +443,11 @@ fun BerandaTab(
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text("Keluar bulan ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                formatRupiah(-ringkasan.totalKeluar),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
+                            TeksRupiahAnimasi(
+                                -ringkasan.totalKeluar,
+                                MaterialTheme.typography.titleSmall,
+                                MaterialTheme.colorScheme.error,
+                                FontWeight.Bold
                             )
                         }
                     }
@@ -839,11 +880,11 @@ fun LaporanTab(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                    Text(
-                        formatRupiah(saldo.total),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                    TeksRupiahAnimasi(
+                        saldo.total,
+                        MaterialTheme.typography.headlineMedium,
+                        Color.White,
+                        FontWeight.ExtraBold
                     )
                     Text(
                         "Saldo Awal: " + formatRupiah(saldoAwal.total),
@@ -852,16 +893,18 @@ fun LaporanTab(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            "Tunai - " + formatRupiah(saldo.tunai),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                        TeksRupiahAnimasi(
+                            saldo.tunai,
+                            MaterialTheme.typography.bodySmall,
+                            Color.White,
+                            awalan = "Tunai - "
                         )
                         Spacer(Modifier.weight(1f))
-                        Text(
-                            "QRIS - " + formatRupiah(saldo.qris),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                        TeksRupiahAnimasi(
+                            saldo.qris,
+                            MaterialTheme.typography.bodySmall,
+                            Color.White,
+                            awalan = "QRIS - "
                         )
                     }
                 }
