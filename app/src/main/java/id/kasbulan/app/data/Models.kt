@@ -14,17 +14,17 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Satu bulan kas. Saat status BERJALAN, transaksi bulan ini masih bisa
- * diubah; setelah DITUTUP, angka final di kolom terakhir menjadi arsip
- * terkunci dan tidak pernah dihitung ulang dari transaksi.
+ * Satu bulan kas. Bulan hanya mengelompokkan catatan dan menjadi unit
+ * tutup buku - bulan TIDAK membawa saldo awal: saldo kas selalu kontinu,
+ * yaitu jumlah seluruh catatan dari semua bulan. Saat status BERJALAN,
+ * transaksi bulan ini masih bisa diubah; setelah DITUTUP, angka final di
+ * kolom terakhir menjadi arsip terkunci.
  */
 @Entity(tableName = "bulan_kas")
 data class BulanKas(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val tahun: Int,
     val bulan: Int,
-    val saldoAwalTunai: Long,
-    val saldoAwalQris: Long,
     val status: String = "BERJALAN",
     val ditutupPada: Long? = null,
     val totalMasukFinal: Long = 0,

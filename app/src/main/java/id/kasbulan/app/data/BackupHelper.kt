@@ -36,8 +36,6 @@ object BackupHelper {
             o.put("id", b.id)
             o.put("tahun", b.tahun)
             o.put("bulan", b.bulan)
-            o.put("saldoAwalTunai", b.saldoAwalTunai)
-            o.put("saldoAwalQris", b.saldoAwalQris)
             o.put("status", b.status)
             o.put("ditutupPada", b.ditutupPada ?: -1L)
             o.put("totalMasukFinal", b.totalMasukFinal)
@@ -81,8 +79,6 @@ object BackupHelper {
                     id = o.getLong("id"),
                     tahun = o.getInt("tahun"),
                     bulan = o.getInt("bulan"),
-                    saldoAwalTunai = o.getLong("saldoAwalTunai"),
-                    saldoAwalQris = o.getLong("saldoAwalQris"),
                     status = o.optString("status", "BERJALAN"),
                     ditutupPada = o.optLong("ditutupPada", -1L).takeIf { it > 0 },
                     totalMasukFinal = o.optLong("totalMasukFinal", 0),

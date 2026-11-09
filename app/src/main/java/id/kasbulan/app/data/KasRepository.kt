@@ -2,8 +2,8 @@ package id.kasbulan.app.data
 
 import androidx.room.withTransaction
 import id.kasbulan.app.STATUS_DITUTUP
-import id.kasbulan.app.hitungSaldo
 import id.kasbulan.app.ringkasanBulan
+import id.kasbulan.app.saldoAkhirBulan
 import kotlinx.coroutines.flow.Flow
 
 class KasRepository(private val db: AppDatabase) {
@@ -14,10 +14,6 @@ class KasRepository(private val db: AppDatabase) {
 
     suspend fun insertBulan(bulan: BulanKas): Long = dao.insertBulan(bulan)
 
-    suspend fun updateSaldoAwal(bulan: BulanKas, tunai: Long, qris: Long) {
-        dao.updateBulan(bulan.copy(saldoAwalTunai = tunai, saldoAwalQris = qris))
-    }
-
     suspend fun insertTransaksi(transaksi: TransaksiKas): Long = dao.insertTransaksi(transaksi)
 
     suspend fun updateTransaksi(transaksi: TransaksiKas) = dao.updateTransaksi(transaksi)
@@ -26,13 +22,15 @@ class KasRepository(private val db: AppDatabase) {
 
     /**
      * Tutup buku: bekukan ringkasan + saldo akhir bulan ini, lalu buka
-     * bulan berikutnya dengan saldo awal = saldo akhir per saluran.
+     * bulan berikutnya. Saldo bersifat kontinu - bulan baru tidak membawa
+     * saldo awal; saldo berjalan terus dari seluruh catatan.
      * Semua dalam satu transaksi database.
      */
     suspend fun tutupBulan(bulan: BulanKas) {
         db.withTransaction {
             val semua = dao.allTransaksiOnce()
-            val saldo = hitungSaldo(bulan, semua)
+            val semuaBulan = dao.allBulanOnce()
+            val saldo = saldoAkhirBulan(bulan, semuaBulan, semua)
             val ringkasan = ringkasanBulan(semua, bulan.id)
             dao.updateBulan(
                 bulan.copy(
@@ -49,9 +47,7 @@ class KasRepository(private val db: AppDatabase) {
             dao.insertBulan(
                 BulanKas(
                     tahun = tahunBerikut,
-                    bulan = bulanBerikut,
-                    saldoAwalTunai = saldo.tunai,
-                    saldoAwalQris = saldo.qris
+                    bulan = bulanBerikut
                 )
             )
         }
