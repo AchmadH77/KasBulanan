@@ -317,6 +317,13 @@ fun formatTanggal(date: LocalDate): String = date.format(FORMAT_TANGGAL)
 fun formatJam(epoch: Long): String =
     Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(FORMAT_JAM)
 
+private val FORMAT_TANGGAL_WAKTU: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d MMM yyyy, HH.mm", Locale("id", "ID"))
+
+/** Bentuk tanggal + jam: "9 Nov 2026, 21.10". */
+fun formatTanggalWaktu(epoch: Long): String =
+    Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(FORMAT_TANGGAL_WAKTU)
+
 private val FORMAT_TANGGAL_SINGKAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE, d MMM", Locale("id", "ID"))
 
