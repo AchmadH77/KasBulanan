@@ -843,7 +843,7 @@ fun LaporanTab(
                         formatRupiah(saldo.total),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color.White
                     )
                     Text(
                         "Saldo Awal: " + formatRupiah(saldoAwal.total),
@@ -855,13 +855,13 @@ fun LaporanTab(
                         Text(
                             "Tunai - " + formatRupiah(saldo.tunai),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color.White
                         )
                         Spacer(Modifier.weight(1f))
                         Text(
                             "QRIS - " + formatRupiah(saldo.qris),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color.White
                         )
                     }
                 }
