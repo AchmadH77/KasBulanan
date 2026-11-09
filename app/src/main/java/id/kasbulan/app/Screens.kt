@@ -1209,6 +1209,8 @@ fun LainnyaTab(
     onBarisSync: () -> Unit,
     emailAkun: String?,
     onKeluarAkun: () -> Unit,
+    onlineSiap: Boolean,
+    syncTerakhir: Long,
     bahasa: BahasaApp,
     onGantiBahasa: () -> Unit
 ) {
@@ -1250,6 +1252,70 @@ fun LainnyaTab(
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
+        item {
+            // Informasi mode aktif: online (masuk) atau offline (tamu/lokal).
+            val sedangOnline = emailAkun != null
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                if (sedangOnline) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                                contentDescription = null,
+                                tint = if (sedangOnline) warnaHijauMasuk() else Color(0xFFE3B341),
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            if (sedangOnline) tr("Mode Online", "Online Mode") else tr("Mode Offline", "Offline Mode"),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            when {
+                                sedangOnline -> emailAkun
+                                onlineSiap -> tr(
+                                    "Mode tamu - data hanya tersimpan di HP ini",
+                                    "Guest mode - data is stored only on this phone"
+                                )
+                                else -> tr(
+                                    "Aplikasi berjalan lokal sepenuhnya di HP ini",
+                                    "The app runs fully locally on this phone"
+                                )
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (sedangOnline) {
+                            Text(
+                                if (syncTerakhir > 0L) {
+                                    tr("Sinkron terakhir: ", "Last synced: ") +
+                                        formatTanggalWaktu(syncTerakhir, LocalBahasa.current)
+                                } else {
+                                    tr("Belum pernah sinkron", "Never synced")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        item { Spacer(Modifier.height(12.dp)) }
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
