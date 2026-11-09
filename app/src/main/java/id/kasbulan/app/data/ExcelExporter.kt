@@ -88,12 +88,12 @@ object ExcelExporter {
 
         val gayaJudul = wb.createCellStyle() as XSSFCellStyle
         gayaJudul.setFont(fontHeader)
-        gayaJudul.fillForegroundColor = warna(0x0E, 0x5C, 0x3A)
+        gayaJudul.setFillForegroundColor(warna(0x0E, 0x5C, 0x3A))
         gayaJudul.fillPattern = FillPatternType.SOLID_FOREGROUND
 
         val gayaData = wb.createCellStyle()
         val gayaZebra = wb.createCellStyle() as XSSFCellStyle
-        gayaZebra.fillForegroundColor = warna(0xF2, 0xF7, 0xF3)
+        gayaZebra.setFillForegroundColor(warna(0xF2, 0xF7, 0xF3))
         gayaZebra.fillPattern = FillPatternType.SOLID_FOREGROUND
 
         val formatUang = wb.createDataFormat().getFormat("#,##0.00")
@@ -101,17 +101,17 @@ object ExcelExporter {
         gayaUang.dataFormat = formatUang
         val gayaUangZebra = wb.createCellStyle() as XSSFCellStyle
         gayaUangZebra.dataFormat = formatUang
-        gayaUangZebra.fillForegroundColor = warna(0xF2, 0xF7, 0xF3)
+        gayaUangZebra.setFillForegroundColor(warna(0xF2, 0xF7, 0xF3))
         gayaUangZebra.fillPattern = FillPatternType.SOLID_FOREGROUND
 
         val gayaTotal = wb.createCellStyle() as XSSFCellStyle
         gayaTotal.setFont(fontBold)
-        gayaTotal.fillForegroundColor = warna(0xE1, 0xEF, 0xE6)
+        gayaTotal.setFillForegroundColor(warna(0xE1, 0xEF, 0xE6))
         gayaTotal.fillPattern = FillPatternType.SOLID_FOREGROUND
         val gayaTotalUang = wb.createCellStyle() as XSSFCellStyle
         gayaTotalUang.setFont(fontBold)
         gayaTotalUang.dataFormat = formatUang
-        gayaTotalUang.fillForegroundColor = warna(0xE1, 0xEF, 0xE6)
+        gayaTotalUang.setFillForegroundColor(warna(0xE1, 0xEF, 0xE6))
         gayaTotalUang.fillPattern = FillPatternType.SOLID_FOREGROUND
 
         val urut = bulanList.sortedWith(compareBy({ it.tahun }, { it.bulan }))
