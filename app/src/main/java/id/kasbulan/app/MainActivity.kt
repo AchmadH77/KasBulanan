@@ -6,7 +6,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,8 +43,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -52,6 +53,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -265,31 +268,37 @@ fun KasBulananApp(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (!showForm) {
-                NavigationBar {
-                NavigationBarItem(
-                    selected = tab == 0,
-                    onClick = { showRekapHariIni = false; tab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("Beranda") }
-                )
-                NavigationBarItem(
-                    selected = tab == 1,
-                    onClick = { showRekapHariIni = false; tab = 1 },
-                    icon = { Icon(Icons.Default.History, contentDescription = null) },
-                    label = { Text("Riwayat") }
-                )
-                NavigationBarItem(
-                    selected = tab == 2,
-                    onClick = { showRekapHariIni = false; tab = 2 },
-                    icon = { Icon(Icons.Default.Assessment, contentDescription = null) },
-                    label = { Text("Laporan") }
-                )
-                NavigationBarItem(
-                    selected = tab == 3,
-                    onClick = { showRekapHariIni = false; tab = 3 },
-                    icon = { Icon(Icons.Default.MoreHoriz, contentDescription = null) },
-                    label = { Text("Lainnya") }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(28.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            ItemPillNav(Icons.Default.Home, "Beranda", tab == 0) {
+                                showRekapHariIni = false; tab = 0
+                            }
+                            ItemPillNav(Icons.Default.History, "Riwayat", tab == 1) {
+                                showRekapHariIni = false; tab = 1
+                            }
+                            ItemPillNav(Icons.Default.Assessment, "Laporan", tab == 2) {
+                                showRekapHariIni = false; tab = 2
+                            }
+                            ItemPillNav(Icons.Default.MoreHoriz, "Lainnya", tab == 3) {
+                                showRekapHariIni = false; tab = 3
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -891,4 +900,43 @@ fun RestoreConfirmDialog(
             TextButton(onClick = onDismiss) { Text("Batal") }
         }
     )
+}
+
+/**
+ * Satu tab pada menu bawah pill melayang (B1): tab aktif melebar menjadi
+ * pill warna utama berisi ikon + label; tab lain hanya ikon. Lebar pill
+ * dianimasikan dengan animateContentSize.
+ */
+@Composable
+private fun ItemPillNav(
+    ikon: ImageVector,
+    label: String,
+    aktif: Boolean,
+    onClick: () -> Unit
+) {
+    val skema = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (aktif) skema.primary else Color.Transparent)
+            .clickable(onClick = onClick)
+            .animateContentSize()
+            .padding(horizontal = if (aktif) 16.dp else 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            ikon,
+            contentDescription = label,
+            tint = if (aktif) skema.onPrimary else skema.onSurfaceVariant
+        )
+        if (aktif) {
+            Spacer(Modifier.width(6.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = skema.onPrimary
+            )
+        }
+    }
 }
