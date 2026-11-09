@@ -12,7 +12,20 @@
           "package_name": "id.kasbulan.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "49722118171-tt3lkp6q7iu5kk7o1vbt4mvqki6ma476.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.kasbulan.app",
+            "certificate_hash": "849ce875b1dabdd8b9e25e37c01b60794022a8eb"
+          }
+        },
+        {
+          "client_id": "49722118171-mrgnr9s1u46sq0uip8hfip44ncq90sq0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCxL9iEy1pvuNjD33i6YIorMf-10hNwEME"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "49722118171-mrgnr9s1u46sq0uip8hfip44ncq90sq0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
