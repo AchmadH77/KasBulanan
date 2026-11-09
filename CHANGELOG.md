@@ -12,6 +12,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The Laporan summary is now a hero layout (design LR1): the current balance sits in a large primary hero card together with the computed opening balance and the per-channel amounts, and Total Masuk / Total Keluar are two side-by-side mini cards beneath it.
 - The Lainnya tab is now a centered profile layout (design LY4): a large app icon and name in the middle with a version pill, the settings (Nama Apotek, Mode Gelap, Backup, Restore) grouped in one card with coloured icon chips, and Tentang in its own card.
 
+- The theme is now Midnight Blue (design R2): deep navy surfaces with an electric cyan accent in dark mode, pale blue and azure in light mode, replacing the pharmacy green. The app is positioned as a universal cash book, not a pharmacy-only one: the name field is now "Nama Usaha" (Business Name), and the About text and placeholders no longer assume a pharmacy.
+- The bottom navigation is now a floating pill bar (design B1): detached from the screen edges, with the active tab expanding into a filled pill that shows its label; inactive tabs are icon-only, and the switch is animated. Tab content also animates with a directional slide and fade.
+- The header on Home, History, and Report is now a floating card (design H4) instead of a full-width band, with the month shown as a filled chip.
+- The balance amounts in the Home and Report heroes are pure white, and income amounts are green everywhere else: transaction rows, the Kas Hari Ini card, the monthly income card, Total Masuk, and Total Pendapatan. Amounts count up or down with a short animation when they change.
+- The About dialog is now an identity card (design T2): app icon, name, version and "since 2026" on a navy card, followed by the description and developer/licence rows.
+
 - The balance model is now a continuous ledger: there is no opening
   balance to enter, ever. The cash balance is simply the sum of all
   records across all months, per channel; a month's "opening balance" in
@@ -39,6 +45,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the best day and today marked, summing to a Total Pendapatan row. Only
   sales count as income here; Tambahan Modal (Added Capital) is money in,
   but not revenue, and is excluded.
+- Excel export in the Lainnya tab: one .xlsx workbook with a sheet per
+  month, formatted with a dark header, zebra rows, a frozen header row,
+  decimal number format, and TOTAL plus SALDO AKHIR (final balance) rows.
+- A last-backup marker: the Backup row now shows when the last backup was
+  saved and to which file, with an amber warning when the data has changed
+  since that backup (or was never backed up).
+- A "Simpan & Catat Lagi" (Save & Record Another) button in the entry form
+  for fast repeated entry: it saves and clears only the amount and note.
+- Custom categories: a gold "+ Buat Kategori" chip in the entry form opens
+  a small dialog to type any category name (design M3); the typed name is
+  stored as-is and shown as its own chip, for both income and expenses.
+- A new launcher icon (design L6): a K on a green gradient with a gold
+  "Rp" badge.
+
+### Removed
+
+- The "Bagikan Laporan" (Share Report) button in the Report tab; the
+  report text builder remains in the code and its tests.
+
+### Fixed
+
+- The CI build failing at R8 minification because Apache POI references
+  desktop/server classes that Android does not have (java.awt, OSGi,
+  Saxon, StAX): the POI stack is now kept and those references are
+  silenced with ProGuard rules, mirroring the pharmacy cashier app.
+- Two compile errors that failed the unit-test step: a POI cell-fill
+  colour assignment that bound to the wrong overload, and a missing
+  TableChart icon import.
 
 ## [1.0.0] - 2026-11-09
 
