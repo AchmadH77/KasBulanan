@@ -2,8 +2,9 @@
 
 [![Build APK](https://github.com/AchmadH77/KasBulanan/actions/workflows/build.yml/badge.svg)](https://github.com/AchmadH77/KasBulanan/actions/workflows/build.yml)
 
-A monthly cash book for pharmacies — an offline Android app for recording
+A universal monthly cash book — an offline Android app for recording
 cash on a monthly rhythm: **open the month → record daily → close the book**.
+For a small shop, a food stall, a service business, or personal cash.
 
 Money is split per channel, **Cash** and **QRIS**, because QRIS money is not
 in the drawer: it sits in the bank account until it is settled. A settlement
@@ -25,10 +26,18 @@ double-count it.
   "Rekap Hari Ini" recap screen (per category and channel, closing balance
   per channel, shareable as text).
 - History grouped per day with daily subtotals; a monthly Report with a
-  per-category breakdown, an Income-per-Day section (sales only, summing
-  to the month's total revenue), and a share button.
+  per-category breakdown and an Income-per-Day section (sales only,
+  summing to the month's total revenue).
+- Fast entry: a full-screen form with a "Save & Record Another" button
+  for repeated entries, and custom categories you can type yourself next
+  to the built-in lists.
+- Excel export: one .xlsx workbook with a sheet per month, formatted
+  headers and zebra rows, decimal number format, and TOTAL plus final
+  balance rows (Apache POI).
 - Backup & restore as a single JSON file, with a preview of the file's
-  contents before any data is replaced. No account, no server, no internet.
+  contents before any data is replaced. The More tab shows when the last
+  backup was saved and warns when the data has changed since it. No
+  account, no server, no internet.
 - Database safety net: an automatic copy of the database file right before
   an updated app is opened for the first time (max. 3 copies), on top of the
   manual backup.
@@ -38,21 +47,21 @@ double-count it.
 Kotlin + Jetpack Compose, a single `:app` module. Official Material 3
 Expressive (1.5.0-rc01, `MaterialExpressiveTheme` +
 `MotionScheme.expressive()`), Compose BOM 2026.09.00, Room 2.7.2. R8 is
-enabled for both debug and release builds. 30 pure-logic unit tests run as
-a CI step before the APK is built. The project follows the Kasir pattern:
+enabled for both debug and release builds. 41 unit tests run as a CI
+step before the APK is built. The project follows the Kasir pattern:
 builds run on GitHub Actions (`workflow_dispatch`), with no Gradle wrapper —
-Gradle 9.3.1 is provided by `gradle/actions/setup-gradle`.
+Gradle 9.6.0 is provided by `gradle/actions/setup-gradle`.
 
 ## Project Structure
 
 ```
 app/src/main/java/id/kasbulan/app/
-├── MainActivity.kt   App shell + all dialogs
+├── MainActivity.kt   App shell, entry form, and dialogs
 ├── Screens.kt        Home, History, Report, and More tabs
 ├── KasLogic.kt       Pure cash logic (balances, summaries, reports)
-├── Theme.kt          Pharmacy-green Material 3 Expressive theme
+├── Theme.kt          Midnight-blue Material 3 Expressive theme
 └── data/             Room (Models, KasRepository), BackupHelper,
-                      DatabaseSnapshot (update safety net)
+                      ExcelExporter, DatabaseSnapshot (update safety net)
 ```
 
 Full explanation: [docs/ARSITEKTUR.md](docs/ARSITEKTUR.md) ·
