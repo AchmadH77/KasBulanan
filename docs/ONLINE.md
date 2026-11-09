@@ -7,8 +7,8 @@ or replaced phone. Local data (Room) stays the source of truth on the
 device; sync runs automatically after changes and periodically.
 
 Without the configuration below, the app builds and behaves exactly
-like the offline version — the Mode Online screen in Lainnya simply
-says "Belum dikonfigurasi".
+like the offline version — no sign-in gate appears, and the Sync row
+in Lainnya simply says "Belum dikonfigurasi".
 
 ## Owner setup (one time, about 10 minutes)
 
@@ -30,9 +30,12 @@ says "Belum dikonfigurasi".
    mode).
 6. In Firestore, open the **Rules** tab, replace the content with the
    `firestore.rules` file from this repository, and publish.
-7. Run the **Build APK** workflow, install the APK, open
-   **Lainnya → Mode Online**, and create an account with
-   **Daftar Akun Baru**. The first sync uploads the whole cash book.
+7. Run the **Build APK** workflow and install the APK. The app now
+   opens on a sign-in gate — create an account with **Daftar Akun
+   Baru** (or continue as a guest and sign in later from the Sync
+   row in **Lainnya**). The first sync uploads the whole cash book.
+   Sync status, manual sync and sign-out live in Lainnya; the cloud
+   icon on the Home balance card also starts a sync when tapped.
 
 ## How sync works
 
