@@ -49,6 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +65,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Text
@@ -542,11 +544,15 @@ fun CatatTransaksiScreen(
     var tanggal by remember { mutableStateOf(tanggalAwal(initial, bulan)) }
     var showDatePicker by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var showKategoriDialog by remember { mutableStateOf(false) }
+    var teksKategori by remember { mutableStateOf("") }
     var jumlahTersimpanLagi by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(jenis) {
         val daftar = if (jenis == JENIS_MASUK) KATEGORI_MASUK else KATEGORI_KELUAR
-        if (kategori !in daftar) kategori = daftar.first()
+        val daftarLawan = if (jenis == JENIS_MASUK) KATEGORI_KELUAR else KATEGORI_MASUK
+        // Kategori bawaan mengikuti jenis; kategori ketik manual dipertahankan.
+        if (kategori in daftarLawan || kategori.isBlank()) kategori = daftar.first()
     }
     val nominal = nominalRaw.toLongOrNull() ?: 0L
     val daftarKategori = if (jenis == JENIS_MASUK) KATEGORI_MASUK else KATEGORI_KELUAR
@@ -621,6 +627,36 @@ fun CatatTransaksiScreen(
                         label = { Text(k) }
                     )
                 }
+                if (kategori !in daftarKategori) {
+                    FilterChip(
+                        selected = true,
+                        onClick = {
+                            teksKategori = kategori
+                            showKategoriDialog = true
+                        },
+                        label = { Text(kategori) }
+                    )
+                }
+                val warnaEmas = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+                    Color(0xFFD4AF37)
+                } else {
+                    Color(0xFF96761C)
+                }
+                FilterChip(
+                    selected = false,
+                    onClick = {
+                        teksKategori = if (kategori !in daftarKategori) kategori else ""
+                        showKategoriDialog = true
+                    },
+                    label = { Text("+ Buat Kategori") },
+                    colors = FilterChipDefaults.filterChipColors(labelColor = warnaEmas),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = false,
+                        borderColor = warnaEmas,
+                        borderWidth = 1.dp
+                    )
+                )
             }
             Text("Tanggal", style = MaterialTheme.typography.labelLarge)
             OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
@@ -683,6 +719,33 @@ fun CatatTransaksiScreen(
                 }
             }
         }
+    }
+    if (showKategoriDialog) {
+        AlertDialog(
+            onDismissRequest = { showKategoriDialog = false },
+            title = { Text("Kategori Baru") },
+            text = {
+                OutlinedTextField(
+                    value = teksKategori,
+                    onValueChange = { teksKategori = it },
+                    label = { Text("Nama kategori") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = teksKategori.isNotBlank(),
+                    onClick = {
+                        kategori = teksKategori.trim()
+                        showKategoriDialog = false
+                    }
+                ) { Text("Pakai") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showKategoriDialog = false }) { Text("Batal") }
+            }
+        )
     }
     if (showDatePicker) {
         PilihTanggalDialog(
