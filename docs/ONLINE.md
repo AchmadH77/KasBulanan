@@ -50,8 +50,26 @@ says "Belum dikonfigurasi".
   sync.
 - Sign out stops syncing; nothing on the device changes.
 
+## Enabling Google Sign-In (optional)
+
+The sign-in screen shows a "Masuk dengan Google" button only when the
+configuration supports it. To enable it:
+
+1. Firebase Console → Project settings → the KasBulanan app →
+   **Add fingerprint**: SHA-1
+   `84:9C:E8:75:B1:DA:BD:D8:B9:E2:5E:37:C0:1B:60:79:40:22:A8:EB`
+   (the kasbulan.p12 signing certificate; the SHA-256 can be added too:
+   `03:1F:8C:FF:03:0A:FD:89:DA:2C:04:7A:A8:F6:8F:41:43:B5:EF:FD:9B:3F:FA:63:E1:45:10:C4:2C:F3:23:3F`).
+2. Authentication → Sign-in method → enable **Google**.
+3. Download a fresh **google-services.json** (it now contains the web
+   client id) and replace `app/google-services.json` in this repo.
+4. Rebuild. The Google button appears on the sign-in form; sign-in uses
+   the system Credential Manager and exchanges the Google ID token for
+   a Firebase session.
+
+Forgot-password e-mail reset is built into the sign-in form
+("Lupa kata sandi?") through Firebase Auth.
+
 ## Not included yet
 
-- Google Sign-In (email/password only for now; the SHA-1 fingerprints
-  and the Credential Manager flow are a follow-up).
-- Account deletion / password reset screens.
+- Account deletion screen.
