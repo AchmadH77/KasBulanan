@@ -44,9 +44,9 @@ connection.
   backup was saved and warns when the data has changed since it.
 - Optional online mode: sign in with email or Google, and entries sync
   both ways with Cloud Firestore (conflicts resolve last-write-wins),
-  automatically after changes, periodically, or on demand from the Mode
-  Online screen. A sync-status icon on the Home balance card shows the
-  current state.
+  automatically after changes, periodically, or on demand from the
+  Sync row in the More tab. A sync-status icon on the Home balance card
+  shows the current state and starts a sync when tapped.
 - When online mode is configured, the app opens on a sign-in gate with a
   guest pass ("Lewati — Pakai Tanpa Akun"), so the offline book is never
   locked behind an account.
@@ -76,7 +76,7 @@ Gradle 9.6.0 is provided by `gradle/actions/setup-gradle`.
 app/src/main/java/id/kasbulan/app/
 ├── MainActivity.kt   App shell, entry form, and dialogs
 ├── Screens.kt        Home, History, Report, and More tabs,
-│                     the sign-in gate, and the Mode Online screen
+│                     and the sign-in gate
 ├── KasLogic.kt       Pure cash logic (balances, summaries, reports)
 ├── Theme.kt          Midnight-blue Material 3 Expressive theme
 └── data/             Room (Models, KasRepository), BackupHelper,
