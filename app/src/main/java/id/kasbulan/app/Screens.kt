@@ -1,6 +1,7 @@
 package id.kasbulan.app
 
 import android.content.Intent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -68,6 +69,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1550,7 +1555,11 @@ fun ModeOnlineScreen(
                                     onClick = onMasukGoogle,
                                     enabled = !sibuk,
                                     modifier = Modifier.fillMaxWidth()
-                                ) { Text("Masuk dengan Google") }
+                                ) {
+                                    LogoGoogle(modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Masuk dengan Google")
+                                }
                             }
                             TextButton(
                                 onClick = { onResetSandi(email) },
@@ -1716,7 +1725,11 @@ fun LayarLogin(
                     onClick = onMasukGoogle,
                     enabled = !sibuk,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Masuk dengan Google") }
+                ) {
+                                    LogoGoogle(modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Masuk dengan Google")
+                                }
             }
             TextButton(
                 onClick = { onResetSandi(email) },
@@ -1743,5 +1756,27 @@ fun LayarLogin(
             )
             Spacer(Modifier.height(32.dp))
         }
+    }
+}
+
+/** Logo "G" Google: empat busur warna resmi + palang tengah, di atas lingkaran putih. */
+@Composable
+private fun LogoGoogle(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val stroke = size.minDimension * 0.17f
+        val pad = stroke / 2 + size.minDimension * 0.03f
+        drawCircle(color = Color.White, radius = size.minDimension / 2)
+        val arcSize = Size(size.width - pad * 2, size.height - pad * 2)
+        val sudut = Offset(pad, pad)
+        val gaya = Stroke(width = stroke, cap = StrokeCap.Butt)
+        drawArc(Color(0xFF4285F4), -45f, 90f, false, topLeft = sudut, size = arcSize, style = gaya)
+        drawArc(Color(0xFF34A853), 45f, 90f, false, topLeft = sudut, size = arcSize, style = gaya)
+        drawArc(Color(0xFFFBBC05), 135f, 90f, false, topLeft = sudut, size = arcSize, style = gaya)
+        drawArc(Color(0xFFEA4335), 225f, 90f, false, topLeft = sudut, size = arcSize, style = gaya)
+        drawRect(
+            color = Color(0xFF4285F4),
+            topLeft = Offset(size.width / 2, size.height / 2 - stroke / 2),
+            size = Size(size.width / 2 - pad + stroke / 2, stroke)
+        )
     }
 }
