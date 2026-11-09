@@ -819,7 +819,6 @@ fun LaporanTab(
                 )
             }
         } else {
-            val context = LocalContext.current
             val saldoAwal = saldoAwalBulan(selected, bulanList, transaksi)
             val saldo = saldoAkhirBulan(selected, bulanList, transaksi)
             val ringkasan = ringkasanBulan(transaksi, selected.id)
@@ -1045,23 +1044,6 @@ fun LaporanTab(
             }
         }
         item {
-            Button(
-                onClick = {
-                    val teks = laporanText(selected, namaApotek, bulanList, transaksi)
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, teks)
-                    }
-                    context.startActivity(Intent.createChooser(intent, "Bagikan Laporan"))
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Bagikan Laporan")
-            }
-        }
-        item {
             if (ditutup) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
@@ -1100,7 +1082,11 @@ fun LainnyaTab(
     onNamaApotekChange: (String) -> Unit,
     dark: Boolean,
     onToggleDark: (Boolean) -> Unit,
+    lastBackupAt: Long,
+    lastBackupName: String,
+    peringatanBackup: String?,
     onBackup: () -> Unit,
+    onEksporExcel: () -> Unit,
     onRestore: () -> Unit,
     onTentang: () -> Unit
 ) {
@@ -1179,8 +1165,14 @@ fun LainnyaTab(
                         icon = Icons.Default.Upload,
                         tint = MaterialTheme.colorScheme.primary,
                         title = "Backup Data",
-                        subtitle = "Simpan semua data ke satu file JSON",
+                        subtitle = if (lastBackupAt > 0L) {
+                            "Terakhir: " + formatTanggalWaktu(lastBackupAt) +
+                                (if (lastBackupName.isNotBlank()) " - " + lastBackupName else "")
+                        } else {
+                            "Simpan semua data ke satu file JSON"
+                        },
                         onClick = onBackup,
+                        peringatan = peringatanBackup,
                         trailing = {
                             Icon(
                                 Icons.Default.ChevronRight,
@@ -1196,6 +1188,21 @@ fun LainnyaTab(
                         title = "Restore Data",
                         subtitle = "Pulihkan dari file backup - mengganti semua data saat ini",
                         onClick = onRestore,
+                        trailing = {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                    LainnyaMenuRow(
+                        icon = Icons.Default.TableChart,
+                        tint = MaterialTheme.colorScheme.primary,
+                        title = "Ekspor Excel",
+                        subtitle = "Semua bulan jadi satu file .xlsx",
+                        onClick = onEksporExcel,
                         trailing = {
                             Icon(
                                 Icons.Default.ChevronRight,
@@ -1264,6 +1271,7 @@ private fun LainnyaMenuRow(
     title: String,
     subtitle: String,
     onClick: (() -> Unit)?,
+    peringatan: String? = null,
     trailing: @Composable () -> Unit
 ) {
     Row(
@@ -1286,6 +1294,13 @@ private fun LainnyaMenuRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (peringatan != null) {
+                Text(
+                    peringatan,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFE3B341)
+                )
+            }
         }
         trailing()
     }
