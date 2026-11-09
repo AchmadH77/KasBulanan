@@ -6,14 +6,16 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.History
@@ -35,6 +38,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -61,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -199,11 +204,13 @@ fun KasBulananApp(
     }
 
     BackHandler(enabled = showRekapHariIni) { showRekapHariIni = false }
+    BackHandler(enabled = showForm) { showForm = false }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            NavigationBar {
+            if (!showForm) {
+                NavigationBar {
                 NavigationBarItem(
                     selected = tab == 0,
                     onClick = { showRekapHariIni = false; tab = 0 },
@@ -228,10 +235,11 @@ fun KasBulananApp(
                     icon = { Icon(Icons.Default.MoreHoriz, contentDescription = null) },
                     label = { Text("Lainnya") }
                 )
+                }
             }
         },
         floatingActionButton = {
-            if ((tab == 0 || tab == 1) && bulanBerjalan != null && !showRekapHariIni) {
+            if ((tab == 0 || tab == 1) && bulanBerjalan != null && !showRekapHariIni && !showForm) {
                 ExtendedFloatingActionButton(
                     onClick = { bukaForm(null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -296,26 +304,26 @@ fun KasBulananApp(
                     onTentang = { showTentang = true }
                 )
             }
+            if (showForm && bulanBerjalan != null) {
+                CatatTransaksiScreen(
+                    bulan = bulanBerjalan,
+                    initial = formInitial,
+                    onBack = { showForm = false },
+                    onSave = { t ->
+                        scope.launch {
+                            if (t.id == 0L) repository.insertTransaksi(t) else repository.updateTransaksi(t)
+                        }
+                        showForm = false
+                    },
+                    onDelete = { t ->
+                        scope.launch { repository.deleteTransaksi(t) }
+                        showForm = false
+                    }
+                )
+            }
         }
     }
 
-    if (showForm && bulanBerjalan != null) {
-        TransaksiFormDialog(
-            bulan = bulanBerjalan,
-            initial = formInitial,
-            onDismiss = { showForm = false },
-            onSave = { t ->
-                scope.launch {
-                    if (t.id == 0L) repository.insertTransaksi(t) else repository.updateTransaksi(t)
-                }
-                showForm = false
-            },
-            onDelete = { t ->
-                scope.launch { repository.deleteTransaksi(t) }
-                showForm = false
-            }
-        )
-    }
     if (showTransfer && bulanBerjalan != null) {
         TransferDialog(
             bulan = bulanBerjalan,
@@ -417,13 +425,13 @@ private fun epochDariTanggal(tanggal: LocalDate, initial: TransaksiKas?): Long {
     return tanggal.atTime(waktu).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
-// ---------- Form transaksi masuk/keluar ----------
+// ---------- Form transaksi masuk/keluar (halaman penuh, CT1) ----------
 
 @Composable
-fun TransaksiFormDialog(
+fun CatatTransaksiScreen(
     bulan: BulanKas,
     initial: TransaksiKas?,
-    onDismiss: () -> Unit,
+    onBack: () -> Unit,
     onSave: (TransaksiKas) -> Unit,
     onDelete: (TransaksiKas) -> Unit
 ) {
@@ -441,95 +449,114 @@ fun TransaksiFormDialog(
     }
     val nominal = nominalRaw.toLongOrNull() ?: 0L
     val daftarKategori = if (jenis == JENIS_MASUK) KATEGORI_MASUK else KATEGORI_KELUAR
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+            }
+            Text(
+                if (initial == null) "Catat Transaksi" else "Ubah Transaksi",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                listOf(JENIS_MASUK to "Masuk", JENIS_KELUAR to "Keluar").forEachIndexed { i, (nilai, label) ->
+                    SegmentedButton(
+                        selected = jenis == nilai,
+                        onClick = { jenis = nilai },
+                        shape = SegmentedButtonDefaults.itemShape(index = i, count = 2)
+                    ) { Text(label) }
+                }
+            }
+            Text("Saluran Uang", style = MaterialTheme.typography.labelLarge)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                listOf(SALURAN_TUNAI to "Tunai", SALURAN_QRIS to "QRIS").forEachIndexed { i, (nilai, label) ->
+                    SegmentedButton(
+                        selected = saluran == nilai,
+                        onClick = { saluran = nilai },
+                        shape = SegmentedButtonDefaults.itemShape(index = i, count = 2)
+                    ) { Text(label) }
+                }
+            }
+            MoneyField("Nominal", nominalRaw) { nominalRaw = it }
+            Text("Kategori", style = MaterialTheme.typography.labelLarge)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    if (initial == null) "Catat Transaksi" else "Ubah Transaksi",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(JENIS_MASUK to "Masuk", JENIS_KELUAR to "Keluar").forEachIndexed { i, (nilai, label) ->
-                        SegmentedButton(
-                            selected = jenis == nilai,
-                            onClick = { jenis = nilai },
-                            shape = SegmentedButtonDefaults.itemShape(index = i, count = 2)
-                        ) { Text(label) }
-                    }
+                daftarKategori.forEach { k ->
+                    FilterChip(
+                        selected = kategori == k,
+                        onClick = { kategori = k },
+                        label = { Text(k) }
+                    )
                 }
-                Text("Saluran Uang", style = MaterialTheme.typography.labelLarge)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(SALURAN_TUNAI to "Tunai", SALURAN_QRIS to "QRIS").forEachIndexed { i, (nilai, label) ->
-                        SegmentedButton(
-                            selected = saluran == nilai,
-                            onClick = { saluran = nilai },
-                            shape = SegmentedButtonDefaults.itemShape(index = i, count = 2)
-                        ) { Text(label) }
-                    }
-                }
-                MoneyField("Nominal", nominalRaw) { nominalRaw = it }
-                Text("Kategori", style = MaterialTheme.typography.labelLarge)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    daftarKategori.forEach { k ->
-                        FilterChip(
-                            selected = kategori == k,
-                            onClick = { kategori = k },
-                            label = { Text(k) }
+            }
+            Text("Tanggal", style = MaterialTheme.typography.labelLarge)
+            OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(formatTanggal(tanggal))
+            }
+            Text("Catatan (boleh kosong)", style = MaterialTheme.typography.labelLarge)
+            OutlinedTextField(
+                value = catatan,
+                onValueChange = { catatan = it },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(
+                enabled = nominal > 0,
+                onClick = {
+                    onSave(
+                        TransaksiKas(
+                            id = initial?.id ?: 0,
+                            bulanId = bulan.id,
+                            jenis = jenis,
+                            saluran = saluran,
+                            saluranTujuan = null,
+                            kategori = kategori,
+                            nominal = nominal,
+                            catatan = catatan.trim(),
+                            epoch = epochDariTanggal(tanggal, initial)
                         )
-                    }
-                }
-                OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Tanggal: " + formatTanggal(tanggal))
-                }
-                OutlinedTextField(
-                    value = catatan,
-                    onValueChange = { catatan = it },
-                    label = { Text("Catatan (boleh kosong)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    if (initial != null) {
-                        TextButton(onClick = { confirmDelete = true }) {
-                            Text("Hapus", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("Batal") }
-                    Button(
-                        enabled = nominal > 0,
-                        onClick = {
-                            onSave(
-                                TransaksiKas(
-                                    id = initial?.id ?: 0,
-                                    bulanId = bulan.id,
-                                    jenis = jenis,
-                                    saluran = saluran,
-                                    saluranTujuan = null,
-                                    kategori = kategori,
-                                    nominal = nominal,
-                                    catatan = catatan.trim(),
-                                    epoch = epochDariTanggal(tanggal, initial)
-                                )
-                            )
-                        }
-                    ) { Text("Simpan") }
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Text("Simpan", style = MaterialTheme.typography.titleMedium)
+            }
+            TextButton(onClick = onBack) { Text("Batal") }
+            if (initial != null) {
+                TextButton(onClick = { confirmDelete = true }) {
+                    Text("Hapus", color = MaterialTheme.colorScheme.error)
                 }
             }
         }
