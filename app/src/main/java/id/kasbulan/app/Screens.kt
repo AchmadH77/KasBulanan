@@ -1,6 +1,7 @@
 package id.kasbulan.app
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -213,6 +214,62 @@ fun TransaksiRow(t: TransaksiKas, clickable: Boolean, onClick: () -> Unit) {
     }
 }
 
+@Composable
+fun PitaHeader(tabLabel: String, namaApotek: String, bulan: BulanKas?) {
+    val bulanTeks = bulan?.let { bulanLabel(it.tahun, it.bulan) }
+    Surface(color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                    Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            "K",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "KasBulanan",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                if (bulanTeks != null) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f))
+                    ) {
+                        Text(
+                            bulanTeks,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                tabLabel + (bulanTeks?.let { " \u2014 " + it.uppercase() } ?: ""),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
 // ---------------- Beranda ----------------
 
 @Composable
@@ -228,24 +285,16 @@ fun BerandaTab(
     onRekapHariIni: () -> Unit,
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Column(modifier = Modifier.padding(top = 16.dp)) {
-                Text("KasBulanan", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                if (namaApotek.isNotBlank()) {
-                    Text(
-                        namaApotek,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
+    Column(modifier = Modifier.fillMaxSize()) {
+        PitaHeader("BERANDA", namaApotek, bulan ?: bulanTerakhir)
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+        item { Spacer(Modifier.height(4.dp)) }
         if (bulan == null) {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
@@ -469,6 +518,7 @@ fun BerandaTab(
         }
         item { Spacer(Modifier.height(72.dp)) }
     }
+    }
 }
 
 // ---------------- Rekap Hari Ini ----------------
@@ -675,30 +725,35 @@ fun RekapHariIniScreen(
 fun RiwayatTab(
     bulanList: List<BulanKas>,
     transaksi: List<TransaksiKas>,
+    namaApotek: String,
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
-    if (bulanList.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-            Text(
-                "Belum ada data. Mulai bulan ini dari tab Beranda.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        return
-    }
     var selectedId by remember { mutableStateOf<Long?>(null) }
     val selected = bulanList.firstOrNull { it.id == selectedId }
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
-        ?: bulanList.last()
-    val milikBulan = transaksi
-        .filter { it.bulanId == selected.id }
-        .sortedByDescending { it.epoch }
-    val perHari = milikBulan.groupBy { epochToLocalDate(it.epoch) }
-    val hariIni = LocalDate.now()
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+        ?: bulanList.lastOrNull()
+    Column(modifier = Modifier.fillMaxSize()) {
+        PitaHeader("RIWAYAT", namaApotek, selected)
+        if (selected == null) {
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Belum ada data. Mulai bulan ini dari tab Beranda.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            val milikBulan = transaksi
+                .filter { it.bulanId == selected.id }
+                .sortedByDescending { it.epoch }
+            val perHari = milikBulan.groupBy { epochToLocalDate(it.epoch) }
+            val hariIni = LocalDate.now()
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
         item { Spacer(Modifier.height(8.dp)) }
         item {
             BulanSelector(bulanList, selected) { selectedId = it.id }
@@ -733,7 +788,8 @@ fun RiwayatTab(
                 TransaksiRow(t, clickable = selected.status == STATUS_BERJALAN) { onTransaksiClick(t) }
             }
         }
-        item { Spacer(Modifier.height(72.dp)) }
+        item { Spacer(Modifier.height(72.dp)) }            }
+        }
     }
 }
 
@@ -746,29 +802,33 @@ fun LaporanTab(
     namaApotek: String,
     onTutupBuku: (BulanKas) -> Unit
 ) {
-    if (bulanList.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-            Text(
-                "Belum ada data. Mulai bulan ini dari tab Beranda.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        return
-    }
-    val context = LocalContext.current
     var selectedId by remember { mutableStateOf<Long?>(null) }
     val selected = bulanList.firstOrNull { it.id == selectedId }
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
-        ?: bulanList.last()
-    val saldoAwal = saldoAwalBulan(selected, bulanList, transaksi)
-    val saldo = saldoAkhirBulan(selected, bulanList, transaksi)
-    val ringkasan = ringkasanBulan(transaksi, selected.id)
-    val pendapatanHarian = pendapatanPerHari(transaksi, selected.id)
-    val ditutup = selected.status == STATUS_DITUTUP
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+        ?: bulanList.lastOrNull()
+    Column(modifier = Modifier.fillMaxSize()) {
+        PitaHeader("LAPORAN", namaApotek, selected)
+        if (selected == null) {
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Belum ada data. Mulai bulan ini dari tab Beranda.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            val context = LocalContext.current
+            val saldoAwal = saldoAwalBulan(selected, bulanList, transaksi)
+            val saldo = saldoAkhirBulan(selected, bulanList, transaksi)
+            val ringkasan = ringkasanBulan(transaksi, selected.id)
+            val pendapatanHarian = pendapatanPerHari(transaksi, selected.id)
+            val ditutup = selected.status == STATUS_DITUTUP
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
         item { Spacer(Modifier.height(8.dp)) }
         item { BulanSelector(bulanList, selected) { selectedId = it.id } }
         item {
@@ -1027,7 +1087,8 @@ fun LaporanTab(
                 }
             }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(24.dp)) }            }
+        }
     }
 }
 

@@ -292,7 +292,7 @@ fun KasBulananApp(
                     onRekapHariIni = { showRekapHariIni = true },
                     onTransaksiClick = { bukaForm(it) }
                 )
-                1 -> RiwayatTab(bulanList, transaksiList) { bukaForm(it) }
+                1 -> RiwayatTab(bulanList, transaksiList, namaApotek) { bukaForm(it) }
                 2 -> LaporanTab(bulanList, transaksiList, namaApotek) { tutupTarget = it }
                 else -> LainnyaTab(
                     namaApotek = namaApotek,
