@@ -268,7 +268,7 @@ fun PitaHeader(namaApotek: String, bulan: BulanKas?) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
+                    if (namaApotek.isNotBlank()) namaApotek else "Nama usaha belum diatur",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -356,7 +356,7 @@ fun BerandaTab(
                         if (bulanTerakhir == null) {
                             Text("Mulai buku kas pertamamu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
-                                "Catat pemasukan dan pengeluaran apotekmu mulai hari ini. Saldo dihitung otomatis dari catatanmu - tidak ada saldo awal yang perlu diisi.",
+                                "Catat pemasukan dan pengeluaranmu mulai hari ini. Saldo dihitung otomatis dari catatanmu - tidak ada saldo awal yang perlu diisi.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1169,7 +1169,7 @@ fun LainnyaTab(
                 Spacer(Modifier.height(12.dp))
                 Text("KasBulanan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
+                    if (namaApotek.isNotBlank()) namaApotek else "Nama usaha belum diatur",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1194,7 +1194,7 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = Icons.Default.Store,
                         tint = Color(0xFF6FA8DC),
-                        title = "Nama Apotek",
+                        title = "Nama Usaha",
                         subtitle = if (namaApotek.isNotBlank()) namaApotek else "Ketuk untuk mengisi - tampil di laporan",
                         onClick = {
                             namaDraft = namaApotek
@@ -1281,7 +1281,7 @@ fun LainnyaTab(
                     icon = Icons.Default.Info,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     title = "Tentang",
-                    subtitle = "Buku kas bulanan khusus apotek, Tunai & QRIS terpisah",
+                    subtitle = "Buku kas bulanan, Tunai & QRIS terpisah",
                     onClick = onTentang,
                     trailing = {
                         Icon(
@@ -1298,12 +1298,12 @@ fun LainnyaTab(
     if (editNama) {
         AlertDialog(
             onDismissRequest = { editNama = false },
-            title = { Text("Nama Apotek") },
+            title = { Text("Nama Usaha") },
             text = {
                 OutlinedTextField(
                     value = namaDraft,
                     onValueChange = { namaDraft = it },
-                    label = { Text("Nama apotek") },
+                    label = { Text("Nama usaha") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
