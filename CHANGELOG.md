@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The balance model is now a continuous ledger: there is no opening
+  balance to enter, ever. The cash balance is simply the sum of all
+  records across all months, per channel; a month's "opening balance" in
+  the Report is computed as the balance at the end of the previous month.
+  Months still group the records and closing a month still locks it -
+  the next month just continues the same running balance instead of
+  carrying a typed-in opening figure. The opening-balance dialog and
+  the edit-opening-balance entries are gone; the first month opens with
+  a single tap. Backups written by earlier builds still parse (the two
+  dropped JSON fields are ignored), and the database keeps version 1
+  because no build has been released yet, so no device holds the old
+  schema.
+
 ### Added
 
 - A daily layer on top of the monthly book: a "Kas Hari Ini" (Today's Cash)

@@ -12,9 +12,11 @@ double-count it.
 
 ## Features
 
-- Monthly cycle: the opening balance comes automatically from the previous
-  month's closing balance; closing the book locks the archive (it can no
-  longer be edited — corrections go through entries in the running month).
+- No opening balance, ever: the balance is one continuous sum of all
+  records across all months, per channel. Months group the records;
+  closing the book locks a month (it can no longer be edited —
+  corrections go through entries in the running month), and the next
+  month continues the same running balance.
 - The balance is always computed from the transaction records — no figure is
   ever typed in directly, so the balance can never disagree with the history.
 - Running-month home: total cash balance + the Cash/QRIS breakdown, this
