@@ -9,6 +9,7 @@ import id.kasbulan.app.saldoAkhirBulan
 import java.io.ByteArrayOutputStream
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.xssf.usermodel.XSSFCellStyle
 import org.apache.poi.xssf.usermodel.XSSFColor
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
@@ -85,29 +86,29 @@ object ExcelExporter {
         fontHeader.bold = true
         fontHeader.color = IndexedColors.WHITE.index
 
-        val gayaJudul = wb.createCellStyle()
+        val gayaJudul = wb.createCellStyle() as XSSFCellStyle
         gayaJudul.setFont(fontHeader)
         gayaJudul.fillForegroundColor = warna(0x0E, 0x5C, 0x3A)
         gayaJudul.fillPattern = FillPatternType.SOLID_FOREGROUND
 
         val gayaData = wb.createCellStyle()
-        val gayaZebra = wb.createCellStyle()
+        val gayaZebra = wb.createCellStyle() as XSSFCellStyle
         gayaZebra.fillForegroundColor = warna(0xF2, 0xF7, 0xF3)
         gayaZebra.fillPattern = FillPatternType.SOLID_FOREGROUND
 
         val formatUang = wb.createDataFormat().getFormat("#,##0.00")
         val gayaUang = wb.createCellStyle()
         gayaUang.dataFormat = formatUang
-        val gayaUangZebra = wb.createCellStyle()
+        val gayaUangZebra = wb.createCellStyle() as XSSFCellStyle
         gayaUangZebra.dataFormat = formatUang
         gayaUangZebra.fillForegroundColor = warna(0xF2, 0xF7, 0xF3)
         gayaUangZebra.fillPattern = FillPatternType.SOLID_FOREGROUND
 
-        val gayaTotal = wb.createCellStyle()
+        val gayaTotal = wb.createCellStyle() as XSSFCellStyle
         gayaTotal.setFont(fontBold)
         gayaTotal.fillForegroundColor = warna(0xE1, 0xEF, 0xE6)
         gayaTotal.fillPattern = FillPatternType.SOLID_FOREGROUND
-        val gayaTotalUang = wb.createCellStyle()
+        val gayaTotalUang = wb.createCellStyle() as XSSFCellStyle
         gayaTotalUang.setFont(fontBold)
         gayaTotalUang.dataFormat = formatUang
         gayaTotalUang.fillForegroundColor = warna(0xE1, 0xEF, 0xE6)
