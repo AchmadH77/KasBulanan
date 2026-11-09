@@ -89,6 +89,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import id.kasbulan.app.data.AppDatabase
 import id.kasbulan.app.data.BackupHelper
+import id.kasbulan.app.data.FirebaseKit
+import id.kasbulan.app.data.HasilSync
+import id.kasbulan.app.data.SyncManager
+import id.kasbulan.app.data.jadwalkanSyncBerkala
 import id.kasbulan.app.data.BulanKas
 import id.kasbulan.app.data.ExcelExporter
 import id.kasbulan.app.data.KasRepository
@@ -99,6 +103,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -181,6 +186,49 @@ fun KasBulananApp(
         lastBackupAt == 0L && transaksiList.isNotEmpty() -> "Belum pernah dibackup"
         lastBackupAt > 0L && lastBackupTanda != tandaData -> "Ada perubahan sejak backup terakhir"
         else -> null
+    }
+
+    // ---- Mode Online (lapisan opsional, docs/ONLINE.md) ----
+    var showOnline by remember { mutableStateOf(false) }
+    val onlineSiap = remember { FirebaseKit.siap(context) }
+    var emailOnline by remember {
+        mutableStateOf(if (onlineSiap) FirebaseKit.emailMasuk() else null)
+    }
+    var syncTerakhir by remember {
+        mutableLongStateOf(prefs.getLong("online_sync_terakhir", 0L))
+    }
+    var onlineSibuk by remember { mutableStateOf(false) }
+    var pesanOnline by remember { mutableStateOf<String?>(null) }
+
+    fun jalankanSync() {
+        if (onlineSibuk) return
+        onlineSibuk = true
+        scope.launch {
+            when (val hasil = SyncManager(repository).sinkronSekarang(context)) {
+                is HasilSync.Berhasil -> {
+                    val kini = System.currentTimeMillis()
+                    prefs.edit().putLong("online_sync_terakhir", kini).apply()
+                    syncTerakhir = kini
+                    pesanOnline = "Sinkron berhasil: " + hasil.didorong +
+                        " terkirim, " + hasil.ditarik + " diterima"
+                }
+                is HasilSync.Gagal -> pesanOnline = "Sinkron gagal: " + hasil.pesan
+                HasilSync.BelumMasuk -> pesanOnline = "Belum masuk"
+                HasilSync.BelumDikonfigurasi -> pesanOnline = "Firebase belum dikonfigurasi"
+            }
+            onlineSibuk = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (onlineSiap) jadwalkanSyncBerkala(context)
+    }
+    // Sync otomatis beberapa detik setelah data berubah (saat sudah masuk).
+    LaunchedEffect(transaksiList, bulanList, emailOnline) {
+        if (onlineSiap && emailOnline != null) {
+            delay(5000)
+            jalankanSync()
+        }
     }
 
     val eksporLauncher = rememberLauncherForActivityResult(
@@ -275,12 +323,13 @@ fun KasBulananApp(
     }
 
     BackHandler(enabled = showRekapHariIni) { showRekapHariIni = false }
+    BackHandler(enabled = showOnline) { showOnline = false }
     BackHandler(enabled = showForm) { showForm = false }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (!showForm) {
+            if (!showForm && !showOnline) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -316,7 +365,7 @@ fun KasBulananApp(
             }
         },
         floatingActionButton = {
-            if (tab == 0 && bulanBerjalan != null && !showRekapHariIni && !showForm) {
+            if (tab == 0 && bulanBerjalan != null && !showRekapHariIni && !showForm && !showOnline) {
                 ExtendedFloatingActionButton(
                     onClick = { bukaForm(null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -397,9 +446,59 @@ fun KasBulananApp(
                         }
                     },
                     onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
-                    onTentang = { showTentang = true }
+                    onTentang = { showTentang = true },
+                    statusOnline = when {
+                        !onlineSiap -> "Belum dikonfigurasi"
+                        emailOnline != null -> "Terhubung: " + emailOnline
+                        else -> "Masuk untuk sinkron otomatis"
+                    },
+                    onModeOnline = { showOnline = true }
                 )
             }
+            }
+            if (showOnline) {
+                ModeOnlineScreen(
+                    terkonfigurasi = onlineSiap,
+                    emailMasuk = emailOnline,
+                    sinkronTerakhir = syncTerakhir,
+                    sibuk = onlineSibuk,
+                    pesanStatus = pesanOnline,
+                    onMasuk = { email, sandi ->
+                        onlineSibuk = true
+                        scope.launch {
+                            try {
+                                emailOnline = FirebaseKit.masukDenganEmail(email.trim(), sandi)
+                                pesanOnline = "Berhasil masuk"
+                                onlineSibuk = false
+                                jalankanSync()
+                            } catch (e: Exception) {
+                                pesanOnline = "Gagal masuk: " + (e.message ?: "periksa email dan kata sandi")
+                                onlineSibuk = false
+                            }
+                        }
+                    },
+                    onDaftar = { email, sandi ->
+                        onlineSibuk = true
+                        scope.launch {
+                            try {
+                                emailOnline = FirebaseKit.daftarDenganEmail(email.trim(), sandi)
+                                pesanOnline = "Akun dibuat dan sudah masuk"
+                                onlineSibuk = false
+                                jalankanSync()
+                            } catch (e: Exception) {
+                                pesanOnline = "Gagal daftar: " + (e.message ?: "coba lagi")
+                                onlineSibuk = false
+                            }
+                        }
+                    },
+                    onKeluar = {
+                        FirebaseKit.keluar()
+                        emailOnline = null
+                        pesanOnline = "Sudah keluar - data di HP ini tidak berubah"
+                    },
+                    onSinkron = { jalankanSync() },
+                    onBack = { showOnline = false }
+                )
             }
             if (showForm && bulanBerjalan != null) {
                 CatatTransaksiScreen(
