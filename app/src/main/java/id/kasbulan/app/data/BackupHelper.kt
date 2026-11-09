@@ -42,6 +42,10 @@ object BackupHelper {
             o.put("totalKeluarFinal", b.totalKeluarFinal)
             o.put("saldoAkhirTunaiFinal", b.saldoAkhirTunaiFinal)
             o.put("saldoAkhirQrisFinal", b.saldoAkhirQrisFinal)
+            // Field sync bersifat tambahan: backup lama tidak punya
+            // field ini dan tetap bisa dibaca (parser memakai bawaan).
+            o.put("remoteId", b.remoteId)
+            o.put("updatedAt", b.updatedAt)
             arrBulan.put(o)
         }
         root.put("bulan", arrBulan)
@@ -57,6 +61,8 @@ object BackupHelper {
             o.put("nominal", t.nominal)
             o.put("catatan", t.catatan)
             o.put("epoch", t.epoch)
+            o.put("remoteId", t.remoteId)
+            o.put("updatedAt", t.updatedAt)
             arrTransaksi.put(o)
         }
         root.put("transaksi", arrTransaksi)
@@ -84,7 +90,9 @@ object BackupHelper {
                     totalMasukFinal = o.optLong("totalMasukFinal", 0),
                     totalKeluarFinal = o.optLong("totalKeluarFinal", 0),
                     saldoAkhirTunaiFinal = o.optLong("saldoAkhirTunaiFinal", 0),
-                    saldoAkhirQrisFinal = o.optLong("saldoAkhirQrisFinal", 0)
+                    saldoAkhirQrisFinal = o.optLong("saldoAkhirQrisFinal", 0),
+                    remoteId = o.optString("remoteId", ""),
+                    updatedAt = o.optLong("updatedAt", 0)
                 )
                 if (b.bulan !in 1..12) return null
                 bulan.add(b)
@@ -113,7 +121,9 @@ object BackupHelper {
                         kategori = o.getString("kategori"),
                         nominal = o.getLong("nominal"),
                         catatan = o.optString("catatan", ""),
-                        epoch = o.getLong("epoch")
+                        epoch = o.getLong("epoch"),
+                        remoteId = o.optString("remoteId", ""),
+                        updatedAt = o.optLong("updatedAt", 0)
                     )
                 )
             }
