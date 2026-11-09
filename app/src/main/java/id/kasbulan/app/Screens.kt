@@ -42,7 +42,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -56,6 +55,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -1045,82 +1046,127 @@ fun LainnyaTab(
     var editNama by remember { mutableStateOf(false) }
     var namaDraft by remember { mutableStateOf("") }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { Spacer(Modifier.height(16.dp)) }
+        item { Spacer(Modifier.height(28.dp)) }
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                    Box(modifier = Modifier.size(76.dp), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Store,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(34.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("KasBulanan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Text(
+                        "Versi 1.0.0",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+        item { Spacer(Modifier.height(20.dp)) }
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
             ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
-                        Box(modifier = Modifier.size(46.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Store, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Column {
+                    LainnyaMenuRow(
+                        icon = Icons.Default.Store,
+                        tint = Color(0xFF6FA8DC),
+                        title = "Nama Apotek",
+                        subtitle = if (namaApotek.isNotBlank()) namaApotek else "Ketuk untuk mengisi - tampil di laporan",
+                        onClick = {
+                            namaDraft = namaApotek
+                            editNama = true
+                        },
+                        trailing = {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("KasBulanan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "Versi 1.0.0",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                    LainnyaMenuRow(
+                        icon = if (dark) Icons.Default.DarkMode else Icons.Default.LightMode,
+                        tint = Color(0xFFE3B341),
+                        title = "Mode Gelap",
+                        subtitle = if (dark) "Aktif" else "Nonaktif - mode terang",
+                        onClick = null,
+                        trailing = { Switch(checked = dark, onCheckedChange = onToggleDark) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                    LainnyaMenuRow(
+                        icon = Icons.Default.Upload,
+                        tint = MaterialTheme.colorScheme.primary,
+                        title = "Backup Data",
+                        subtitle = "Simpan semua data ke satu file JSON",
+                        onClick = onBackup,
+                        trailing = {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                    LainnyaMenuRow(
+                        icon = Icons.Default.Download,
+                        tint = Color(0xFFD18BC0),
+                        title = "Restore Data",
+                        subtitle = "Pulihkan dari file backup - mengganti semua data saat ini",
+                        onClick = onRestore,
+                        trailing = {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
                 }
             }
         }
         item { Spacer(Modifier.height(12.dp)) }
         item {
-            ListItem(
-                headlineContent = { Text("Nama Apotek") },
-                supportingContent = { Text(if (namaApotek.isNotBlank()) namaApotek else "Ketuk untuk mengisi - tampil di laporan") },
-                leadingContent = { Icon(Icons.Default.Store, contentDescription = null) },
-                trailingContent = { Icon(Icons.Default.Edit, contentDescription = null) },
-                modifier = Modifier.clickable {
-                    namaDraft = namaApotek
-                    editNama = true
-                }
-            )
-        }
-        item {
-            ListItem(
-                headlineContent = { Text("Mode Gelap") },
-                supportingContent = { Text(if (dark) "Aktif" else "Nonaktif - mode terang") },
-                leadingContent = {
-                    Icon(if (dark) Icons.Default.DarkMode else Icons.Default.LightMode, contentDescription = null)
-                },
-                trailingContent = { Switch(checked = dark, onCheckedChange = onToggleDark) }
-            )
-        }
-        item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
-        item {
-            ListItem(
-                headlineContent = { Text("Backup Data") },
-                supportingContent = { Text("Simpan semua data ke satu file JSON") },
-                leadingContent = { Icon(Icons.Default.Upload, contentDescription = null) },
-                modifier = Modifier.clickable(onClick = onBackup)
-            )
-        }
-        item {
-            ListItem(
-                headlineContent = { Text("Restore Data") },
-                supportingContent = { Text("Pulihkan dari file backup - mengganti semua data saat ini") },
-                leadingContent = { Icon(Icons.Default.Download, contentDescription = null) },
-                modifier = Modifier.clickable(onClick = onRestore)
-            )
-        }
-        item {
-            ListItem(
-                headlineContent = { Text("Tentang") },
-                supportingContent = { Text("Buku kas bulanan khusus apotek, Tunai & QRIS terpisah") },
-                leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
-                modifier = Modifier.clickable(onClick = onTentang)
-            )
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+            ) {
+                LainnyaMenuRow(
+                    icon = Icons.Default.Info,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    title = "Tentang",
+                    subtitle = "Buku kas bulanan khusus apotek, Tunai & QRIS terpisah",
+                    onClick = onTentang,
+                    trailing = {
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
         }
         item { Spacer(Modifier.height(24.dp)) }
     }
@@ -1147,5 +1193,39 @@ fun LainnyaTab(
                 TextButton(onClick = { editNama = false }) { Text("Batal") }
             }
         )
+    }
+}
+
+@Composable
+private fun LainnyaMenuRow(
+    icon: ImageVector,
+    tint: Color,
+    title: String,
+    subtitle: String,
+    onClick: (() -> Unit)?,
+    trailing: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+            Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(19.dp))
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        trailing()
     }
 }
