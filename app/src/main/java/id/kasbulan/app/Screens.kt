@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Store
@@ -91,17 +92,24 @@ import java.time.YearMonth
 
 fun saluranLabel(saluran: String): String = if (saluran == SALURAN_QRIS) "QRIS" else "Tunai"
 
+/** Label saluran untuk tampilan (mengikuti bahasa aktif). */
+@Composable
+fun saluranTampil(saluran: String): String =
+    if (saluran == SALURAN_QRIS) "QRIS" else tr("Tunai", "Cash")
+
+@Composable
 fun judulTransaksi(t: TransaksiKas): String =
     if (t.jenis == JENIS_TRANSFER) {
-        "Transfer " + saluranLabel(t.saluran) + " \u2192 " + saluranLabel(t.saluranTujuan ?: SALURAN_TUNAI)
+        "Transfer " + saluranTampil(t.saluran) + " \u2192 " + saluranTampil(t.saluranTujuan ?: SALURAN_TUNAI)
     } else {
-        t.kategori
+        tampilKategori(t.kategori)
     }
 
+@Composable
 fun subTransaksi(t: TransaksiKas): String {
     val sb = StringBuilder()
     sb.append(formatJam(t.epoch))
-    if (t.jenis != JENIS_TRANSFER) sb.append(" \u00b7 ").append(saluranLabel(t.saluran))
+    if (t.jenis != JENIS_TRANSFER) sb.append(" \u00b7 ").append(saluranTampil(t.saluran))
     if (t.catatan.isNotBlank()) sb.append(" \u00b7 ").append(t.catatan)
     return sb.toString()
 }
@@ -130,13 +138,13 @@ fun BulanSelector(bulanList: List<BulanKas>, selected: BulanKas, onSelect: (Bula
         IconButton(
             onClick = { if (index > 0) onSelect(bulanList[index - 1]) },
             enabled = index > 0
-        ) { Icon(Icons.Default.ChevronLeft, contentDescription = "Bulan sebelumnya") }
+        ) { Icon(Icons.Default.ChevronLeft, contentDescription = tr("Bulan sebelumnya", "Previous month")) }
         Column(
             modifier = Modifier.weight(1f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                bulanLabel(selected.tahun, selected.bulan),
+                bulanLabel(selected.tahun, selected.bulan, LocalBahasa.current),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -150,7 +158,7 @@ fun BulanSelector(bulanList: List<BulanKas>, selected: BulanKas, onSelect: (Bula
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "Ditutup",
+                        tr("Ditutup", "Closed"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary
                     )
@@ -160,7 +168,7 @@ fun BulanSelector(bulanList: List<BulanKas>, selected: BulanKas, onSelect: (Bula
         IconButton(
             onClick = { if (index < bulanList.size - 1) onSelect(bulanList[index + 1]) },
             enabled = index < bulanList.size - 1
-        ) { Icon(Icons.Default.ChevronRight, contentDescription = "Bulan berikutnya") }
+        ) { Icon(Icons.Default.ChevronRight, contentDescription = tr("Bulan berikutnya", "Next month")) }
     }
 }
 
@@ -249,7 +257,7 @@ fun TransaksiRow(t: TransaksiKas, clickable: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun PitaHeader(namaApotek: String, bulan: BulanKas?) {
-    val bulanTeks = bulan?.let { bulanLabel(it.tahun, it.bulan) }
+    val bulanTeks = bulan?.let { bulanLabel(it.tahun, it.bulan, LocalBahasa.current) }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(20.dp),
@@ -281,7 +289,7 @@ fun PitaHeader(namaApotek: String, bulan: BulanKas?) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    if (namaApotek.isNotBlank()) namaApotek else "Nama usaha belum diatur",
+                    if (namaApotek.isNotBlank()) namaApotek else tr("Nama usaha belum diatur", "Business name not set"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -372,24 +380,24 @@ fun BerandaTab(
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (bulanTerakhir == null) {
-                            Text("Mulai buku kas pertamamu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(tr("Mulai buku kas pertamamu", "Start your first cash book"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
-                                "Catat pemasukan dan pengeluaranmu mulai hari ini. Saldo dihitung otomatis dari catatanmu - tidak ada saldo awal yang perlu diisi.",
+                                tr("Catat pemasukan dan pengeluaranmu mulai hari ini. Saldo dihitung otomatis dari catatanmu - tidak ada saldo awal yang perlu diisi.", "Record your income and expenses starting today. The balance is computed automatically from your records - there is no opening balance to fill in."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Button(onClick = onMulaiBulanIni, modifier = Modifier.fillMaxWidth()) {
-                                Text("Mulai Bulan Ini")
+                                Text(tr("Mulai Bulan Ini", "Start This Month"))
                             }
                         } else {
-                            Text("Semua bulan sudah ditutup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(tr("Semua bulan sudah ditutup", "All months are closed"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
-                                "Buka bulan berikutnya untuk melanjutkan pencatatan. Saldo berjalan terus dari seluruh catatanmu.",
+                                tr("Buka bulan berikutnya untuk melanjutkan pencatatan. Saldo berjalan terus dari seluruh catatanmu.", "Open the next month to keep recording. The balance keeps running from all your records."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Button(onClick = onBukaBulanBerikutnya, modifier = Modifier.fillMaxWidth()) {
-                                Text("Buka " + (labelBulanBerikutnya ?: "Bulan Berikutnya"))
+                                Text(tr("Buka ", "Open ") + (labelBulanBerikutnya ?: tr("Bulan Berikutnya", "Next Month")))
                             }
                         }
                     }
@@ -406,14 +414,14 @@ fun BerandaTab(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        bulanLabel(bulan.tahun, bulan.bulan),
+                        bulanLabel(bulan.tahun, bulan.bulan, LocalBahasa.current),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.width(8.dp))
                     Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primaryContainer) {
                         Text(
-                            "Berjalan",
+                            tr("Berjalan", "Open"),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -426,7 +434,7 @@ fun BerandaTab(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Saldo Kas",
+                                tr("Saldo Kas", "Cash Balance"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.weight(1f)
@@ -443,10 +451,10 @@ fun BerandaTab(
                                     else -> MaterialTheme.colorScheme.onPrimaryContainer
                                 }
                                 val labelStatus = when (statusSync) {
-                                    StatusSync.BERHASIL -> "Sudah tersinkron"
-                                    StatusSync.PROSES -> "Sedang menyinkronkan"
-                                    StatusSync.GAGAL -> "Sinkron gagal"
-                                    else -> "Belum masuk"
+                                    StatusSync.BERHASIL -> tr("Sudah tersinkron", "Synced")
+                                    StatusSync.PROSES -> tr("Sedang menyinkronkan", "Syncing")
+                                    StatusSync.GAGAL -> tr("Sinkron gagal", "Sync failed")
+                                    else -> tr("Belum masuk", "Not signed in")
                                 }
                                 IconButton(
                                     onClick = onBukaOnline,
@@ -472,11 +480,11 @@ fun BerandaTab(
                         Spacer(Modifier.height(10.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Tunai (laci)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Text(tr("Tunai (laci)", "Cash (drawer)"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                                 TeksRupiahAnimasi(saldo.tunai, MaterialTheme.typography.titleSmall, Color.White, FontWeight.Bold)
                             }
                             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text("QRIS (rekening)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Text(tr("QRIS (rekening)", "QRIS (account)"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                                 TeksRupiahAnimasi(saldo.qris, MaterialTheme.typography.titleSmall, Color.White, FontWeight.Bold)
                             }
                         }
@@ -490,7 +498,7 @@ fun BerandaTab(
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Masuk bulan ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Masuk bulan ini", "Income this month"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             TeksRupiahAnimasi(
                                 ringkasan.totalMasuk,
                                 MaterialTheme.typography.titleSmall,
@@ -505,7 +513,7 @@ fun BerandaTab(
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Keluar bulan ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Keluar bulan ini", "Expenses this month"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             TeksRupiahAnimasi(
                                 -ringkasan.totalKeluar,
                                 MaterialTheme.typography.titleSmall,
@@ -519,7 +527,7 @@ fun BerandaTab(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Saldo berjalan dari seluruh catatan",
+                        tr("Saldo berjalan dari seluruh catatan", "Running balance from all records"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -527,7 +535,7 @@ fun BerandaTab(
                     OutlinedButton(onClick = onTransfer) {
                         Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Transfer")
+                        Text(tr("Transfer", "Transfer"))
                     }
                 }
             }
@@ -539,21 +547,21 @@ fun BerandaTab(
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "KAS HARI INI",
+                                tr("KAS HARI INI", "TODAY'S CASH"),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
-                                formatTanggal(hariIni),
+                                formatTanggal(hariIni, LocalBahasa.current),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Masuk ",
+                                tr("Masuk ", "In "),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -564,7 +572,7 @@ fun BerandaTab(
                                 color = warnaHijauMasuk()
                             )
                             Text(
-                                "  \u00b7  Keluar ",
+                                "  \u00b7  " + tr("Keluar ", "Out "),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -576,14 +584,14 @@ fun BerandaTab(
                             )
                         }
                         Button(onClick = onRekapHariIni, modifier = Modifier.fillMaxWidth()) {
-                            Text("Rekap Hari Ini")
+                            Text(tr("Rekap Hari Ini", "Today's Recap"))
                         }
                         Text(
                             if (rKemarin.jumlahTransaksi > 0) {
-                                "Kemarin: masuk " + formatRupiah(rKemarin.totalMasuk) +
-                                    " \u00b7 keluar " + formatRupiah(rKemarin.totalKeluar)
+                                tr("Kemarin: masuk ", "Yesterday: in ") + formatRupiah(rKemarin.totalMasuk) +
+                                    " \u00b7 " + tr("keluar ", "out ") + formatRupiah(rKemarin.totalKeluar)
                             } else {
-                                "Kemarin: tidak ada catatan."
+                                tr("Kemarin: tidak ada catatan.", "Yesterday: no records.")
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -595,8 +603,8 @@ fun BerandaTab(
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                         Text(
-                            "Bulan kalender sudah berganti, tetapi " + bulanLabel(bulan.tahun, bulan.bulan) +
-                                " masih berjalan. Tutup buku dari tab Laporan untuk membuka bulan baru.",
+                            tr("Bulan kalender sudah berganti, tetapi ", "The calendar month has moved on, but ") + bulanLabel(bulan.tahun, bulan.bulan, LocalBahasa.current) +
+                                tr(" masih berjalan. Tutup buku dari tab Laporan untuk membuka bulan baru.", " is still open. Close the book from the Report tab to open a new month."),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             modifier = Modifier.padding(12.dp)
@@ -605,12 +613,12 @@ fun BerandaTab(
                 }
             }
             item {
-                Text("Transaksi Terakhir", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(tr("Transaksi Terakhir", "Latest Transactions"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
             if (terakhir.isEmpty()) {
                 item {
                     Text(
-                        "Belum ada transaksi bulan ini.",
+                        tr("Belum ada transaksi bulan ini.", "No transactions this month yet."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -648,12 +656,12 @@ fun RekapHariIniScreen(
         item {
             Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    Icon(Icons.Default.ArrowBack, contentDescription = tr("Kembali", "Back"))
                 }
                 Column {
-                    Text("Rekap Hari Ini", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(tr("Rekap Hari Ini", "Today's Recap"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(
-                        formatTanggal(hariIni),
+                        formatTanggal(hariIni, LocalBahasa.current),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -664,7 +672,7 @@ fun RekapHariIniScreen(
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                     Text(
-                        "Belum ada catatan hari ini. Catat penjualan dan pengeluaran seperti biasa, rekapnya terisi otomatis.",
+                        tr("Belum ada catatan hari ini. Catat penjualan dan pengeluaran seperti biasa, rekapnya terisi otomatis.", "No records today yet. Record sales and expenses as usual, and the recap fills itself in."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -676,7 +684,7 @@ fun RekapHariIniScreen(
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Text("Pemasukan", style = MaterialTheme.typography.bodyMedium)
+                            Text(tr("Pemasukan", "Income"), style = MaterialTheme.typography.bodyMedium)
                             Spacer(Modifier.weight(1f))
                             Text(
                                 "+" + formatRupiah(ringkasan.totalMasuk),
@@ -687,7 +695,7 @@ fun RekapHariIniScreen(
                         for (r in ringkasan.rincianMasuk) {
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    "   " + r.kategori + " \u00b7 " + saluranLabel(r.saluran),
+                                    "   " + tampilKategori(r.kategori) + " \u00b7 " + saluranTampil(r.saluran),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -697,7 +705,7 @@ fun RekapHariIniScreen(
                         }
                         HorizontalDivider()
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Text("Pengeluaran", style = MaterialTheme.typography.bodyMedium)
+                            Text(tr("Pengeluaran", "Expenses"), style = MaterialTheme.typography.bodyMedium)
                             Spacer(Modifier.weight(1f))
                             Text(
                                 formatRupiah(-ringkasan.totalKeluar),
@@ -708,7 +716,7 @@ fun RekapHariIniScreen(
                         for (r in ringkasan.rincianKeluar) {
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    "   " + r.kategori + " \u00b7 " + saluranLabel(r.saluran),
+                                    "   " + tampilKategori(r.kategori) + " \u00b7 " + saluranTampil(r.saluran),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -725,8 +733,8 @@ fun RekapHariIniScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (tr in ringkasan.transfer) {
                         Text(
-                            "Transfer " + saluranLabel(tr.dari) + " \u2192 " + saluranLabel(tr.ke) +
-                                ": " + formatRupiah(tr.nominal) + " (netral)",
+                            "Transfer " + saluranTampil(tr.dari) + " \u2192 " + saluranTampil(tr.ke) +
+                                ": " + formatRupiah(tr.nominal) + tr(" (netral)", " (neutral)"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -735,12 +743,12 @@ fun RekapHariIniScreen(
                         HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.35f))
                     }
                     Text(
-                        "SALDO AKHIR HARI INI",
+                        tr("SALDO AKHIR HARI INI", "TODAY'S CLOSING BALANCE"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text("Tunai", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(tr("Tunai", "Cash"), color = MaterialTheme.colorScheme.onPrimaryContainer)
                         Spacer(Modifier.weight(1f))
                         Text(
                             formatRupiah(saldoAkhir.tunai),
@@ -764,7 +772,7 @@ fun RekapHariIniScreen(
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row {
                     Text(
-                        "Total kas akhir: ",
+                        tr("Total kas akhir: ", "Final cash total: "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -775,8 +783,8 @@ fun RekapHariIniScreen(
                     )
                 }
                 Text(
-                    ringkasan.jumlahTransaksi.toString() + " transaksi tercatat hari ini \u00b7 bulan " +
-                        bulanLabel(bulan.tahun, bulan.bulan) + " berjalan",
+                    ringkasan.jumlahTransaksi.toString() + tr(" transaksi tercatat hari ini \u00b7 bulan ", " transactions recorded today \u00b7 month ") +
+                        bulanLabel(bulan.tahun, bulan.bulan, LocalBahasa.current) + tr(" berjalan", " is open"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -790,30 +798,30 @@ fun RekapHariIniScreen(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, teks)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Bagikan Rekap"))
+                    context.startActivity(Intent.createChooser(intent, tr("Bagikan Rekap", "Share Recap")))
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Bagikan Rekap")
+                Text(tr("Bagikan Rekap", "Share Recap"))
             }
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        "Rekap ini rangkuman hari berjalan.",
+                        tr("Rekap ini rangkuman hari berjalan.", "This recap summarises the current day."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Angka resmi bulan tetap ditetapkan saat Tutup Buku.",
+                        tr("Angka resmi bulan tetap ditetapkan saat Tutup Buku.", "The month's official figures are set at book closing."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Detail per transaksi ada di tab Riwayat.",
+                        tr("Detail per transaksi ada di tab Riwayat.", "Per-transaction details are in the History tab."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -845,7 +853,7 @@ fun RiwayatTab(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "Belum ada data. Mulai bulan ini dari tab Beranda.",
+                    tr("Belum ada data. Mulai bulan ini dari tab Beranda.", "No data yet. Start this month from the Home tab."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -866,7 +874,7 @@ fun RiwayatTab(
         if (milikBulan.isEmpty()) {
             item {
                 Text(
-                    "Belum ada transaksi pada bulan ini.",
+                    tr("Belum ada transaksi pada bulan ini.", "No transactions in this month yet."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp)
                 )
@@ -880,10 +888,10 @@ fun RiwayatTab(
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(labelHari(tanggal, hariIni), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(labelHari(tanggal, hariIni, LocalBahasa.current), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
                     Text(
-                        "Masuk " + groupThousands(masukHari.toString()) + " - Keluar " + groupThousands(keluarHari.toString()),
+                        tr("Masuk ", "In ") + groupThousands(masukHari.toString()) + " - " + tr("Keluar ", "Out ") + groupThousands(keluarHari.toString()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -919,7 +927,7 @@ fun LaporanTab(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "Belum ada data. Mulai bulan ini dari tab Beranda.",
+                    tr("Belum ada data. Mulai bulan ini dari tab Beranda.", "No data yet. Start this month from the Home tab."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -939,7 +947,7 @@ fun LaporanTab(
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        if (ditutup) "Saldo Akhir" else "Saldo Saat Ini",
+                        if (ditutup) tr("Saldo Akhir", "Closing Balance") else tr("Saldo Saat Ini", "Current Balance"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -950,7 +958,7 @@ fun LaporanTab(
                         FontWeight.ExtraBold
                     )
                     Text(
-                        "Saldo Awal: " + formatRupiah(saldoAwal.total),
+                        tr("Saldo Awal: ", "Opening Balance: ") + formatRupiah(saldoAwal.total),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -960,7 +968,7 @@ fun LaporanTab(
                             saldo.tunai,
                             MaterialTheme.typography.bodySmall,
                             Color.White,
-                            awalan = "Tunai - "
+                            awalan = tr("Tunai - ", "Cash - ")
                         )
                         Spacer(Modifier.weight(1f))
                         TeksRupiahAnimasi(
@@ -981,7 +989,7 @@ fun LaporanTab(
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "Total Masuk",
+                            tr("Total Masuk", "Total Income"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -999,7 +1007,7 @@ fun LaporanTab(
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "Total Keluar",
+                            tr("Total Keluar", "Total Expenses"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1015,7 +1023,7 @@ fun LaporanTab(
         }
         if (ringkasan.perKategoriKeluar.isNotEmpty()) {
             item {
-                Text("Rincian Keluar per Kategori", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(tr("Rincian Keluar per Kategori", "Expense Breakdown by Category"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
             item {
                 val maks = ringkasan.perKategoriKeluar.values.maxOrNull() ?: 1L
@@ -1024,7 +1032,7 @@ fun LaporanTab(
                         for ((kategori, nominal) in ringkasan.perKategoriKeluar) {
                             Column {
                                 Row(modifier = Modifier.fillMaxWidth()) {
-                                    Text(kategori, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(tampilKategori(kategori), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(Modifier.weight(1f))
                                     Text(formatRupiah(nominal), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                                 }
@@ -1043,7 +1051,7 @@ fun LaporanTab(
         }
         if (ringkasan.perKategoriMasuk.isNotEmpty()) {
             item {
-                Text("Rincian Masuk per Kategori", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(tr("Rincian Masuk per Kategori", "Income Breakdown by Category"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
             item {
                 val maks = ringkasan.perKategoriMasuk.values.maxOrNull() ?: 1L
@@ -1052,7 +1060,7 @@ fun LaporanTab(
                         for ((kategori, nominal) in ringkasan.perKategoriMasuk) {
                             Column {
                                 Row(modifier = Modifier.fillMaxWidth()) {
-                                    Text(kategori, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(tampilKategori(kategori), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(Modifier.weight(1f))
                                     Text(formatRupiah(nominal), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                                 }
@@ -1072,10 +1080,10 @@ fun LaporanTab(
         if (pendapatanHarian.isNotEmpty()) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Pendapatan per Hari", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(tr("Pendapatan per Hari", "Income per Day"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
                     Text(
-                        "kategori Penjualan saja",
+                        tr("kategori Penjualan saja", "Sales category only"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1094,9 +1102,9 @@ fun LaporanTab(
                             Column {
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        formatTanggalSingkat(p.tanggal) +
-                                            (if (hariIniBaris) " \u00b7 hari ini" else "") +
-                                            (if (tertinggi) " \u00b7 tertinggi" else ""),
+                                        formatTanggalSingkat(p.tanggal, LocalBahasa.current) +
+                                            (if (hariIniBaris) tr(" \u00b7 hari ini", " \u00b7 today") else "") +
+                                            (if (tertinggi) tr(" \u00b7 tertinggi", " \u00b7 highest") else ""),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (sorot) {
                                             MaterialTheme.colorScheme.primary
@@ -1128,7 +1136,7 @@ fun LaporanTab(
                         HorizontalDivider()
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                "TOTAL PENDAPATAN",
+                                tr("TOTAL PENDAPATAN", "TOTAL REVENUE"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1142,7 +1150,7 @@ fun LaporanTab(
                         }
                         Text(
                             pendapatanHarian.size.toString() +
-                                " hari tercatat \u2014 jumlah semua baris di atas. Tambahan Modal tidak dihitung sebagai pendapatan.",
+                                tr(" hari tercatat \u2014 jumlah semua baris di atas. Tambahan Modal tidak dihitung sebagai pendapatan.", " days recorded \u2014 the sum of all rows above. Capital Injection does not count as revenue."),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1156,7 +1164,7 @@ fun LaporanTab(
                     Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "Bulan ini sudah ditutup" + (selected.ditutupPada?.let { " pada " + formatTanggal(it) } ?: "") + " dan terkunci.",
+                        tr("Bulan ini sudah ditutup", "This month is closed") + (selected.ditutupPada?.let { tr(" pada ", " on ") + formatTanggal(it, LocalBahasa.current) } ?: "") + tr(" dan terkunci.", " and locked."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1166,10 +1174,10 @@ fun LaporanTab(
                     OutlinedButton(onClick = { onTutupBuku(selected) }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Tutup Buku " + bulanLabel(selected.tahun, selected.bulan))
+                        Text(tr("Tutup Buku ", "Close the Book: ") + bulanLabel(selected.tahun, selected.bulan, LocalBahasa.current))
                     }
                     Text(
-                        "Menutup buku mengunci bulan ini dan membuka bulan berikutnya. Saldo berjalan terus dari seluruh catatan.",
+                        tr("Menutup buku mengunci bulan ini dan membuka bulan berikutnya. Saldo berjalan terus dari seluruh catatan.", "Closing the book locks this month and opens the next one. The balance keeps running from all records."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1197,7 +1205,9 @@ fun LainnyaTab(
     onRestore: () -> Unit,
     onTentang: () -> Unit,
     statusOnline: String,
-    onModeOnline: () -> Unit
+    onModeOnline: () -> Unit,
+    bahasa: BahasaApp,
+    onGantiBahasa: () -> Unit
 ) {
     var editNama by remember { mutableStateOf(false) }
     var namaDraft by remember { mutableStateOf("") }
@@ -1221,14 +1231,14 @@ fun LainnyaTab(
                 Spacer(Modifier.height(12.dp))
                 Text("KasBulanan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    if (namaApotek.isNotBlank()) namaApotek else "Nama usaha belum diatur",
+                    if (namaApotek.isNotBlank()) namaApotek else tr("Nama usaha belum diatur", "Business name not set"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainer) {
                     Text(
-                        "Versi 1.0.0",
+                        tr("Versi 1.0.0", "Version 1.0.0"),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -1246,8 +1256,8 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = Icons.Default.Store,
                         tint = Color(0xFF6FA8DC),
-                        title = "Nama Usaha",
-                        subtitle = if (namaApotek.isNotBlank()) namaApotek else "Ketuk untuk mengisi - tampil di laporan",
+                        title = tr("Nama Usaha", "Business Name"),
+                        subtitle = if (namaApotek.isNotBlank()) namaApotek else tr("Ketuk untuk mengisi - tampil di laporan", "Tap to fill in - shown on reports"),
                         onClick = {
                             namaDraft = namaApotek
                             editNama = true
@@ -1264,21 +1274,36 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = if (dark) Icons.Default.DarkMode else Icons.Default.LightMode,
                         tint = Color(0xFFE3B341),
-                        title = "Mode Gelap",
-                        subtitle = if (dark) "Aktif" else "Nonaktif - mode terang",
+                        title = tr("Mode Gelap", "Dark Mode"),
+                        subtitle = if (dark) tr("Aktif", "On") else tr("Nonaktif - mode terang", "Off - light mode"),
                         onClick = null,
                         trailing = { Switch(checked = dark, onCheckedChange = onToggleDark) }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
                     LainnyaMenuRow(
+                        icon = Icons.Default.Language,
+                        tint = Color(0xFF7FB3D5),
+                        title = tr("Bahasa", "Language"),
+                        subtitle = if (bahasa == BahasaApp.ID) "Bahasa Indonesia" else "English",
+                        onClick = onGantiBahasa,
+                        trailing = {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+                    LainnyaMenuRow(
                         icon = Icons.Default.Upload,
                         tint = MaterialTheme.colorScheme.primary,
-                        title = "Backup Data",
+                        title = tr("Backup Data", "Back Up Data"),
                         subtitle = if (lastBackupAt > 0L) {
-                            "Terakhir: " + formatTanggalWaktu(lastBackupAt) +
+                            tr("Terakhir: ", "Last: ") + formatTanggalWaktu(lastBackupAt, LocalBahasa.current) +
                                 (if (lastBackupName.isNotBlank()) " - " + lastBackupName else "")
                         } else {
-                            "Simpan semua data ke satu file JSON"
+                            tr("Simpan semua data ke satu file JSON", "Save all data to a single JSON file")
                         },
                         onClick = onBackup,
                         peringatan = peringatanBackup,
@@ -1294,8 +1319,8 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = Icons.Default.Download,
                         tint = Color(0xFFD18BC0),
-                        title = "Restore Data",
-                        subtitle = "Pulihkan dari file backup - mengganti semua data saat ini",
+                        title = tr("Restore Data", "Restore Data"),
+                        subtitle = tr("Pulihkan dari file backup - mengganti semua data saat ini", "Restore from a backup file - replaces all current data"),
                         onClick = onRestore,
                         trailing = {
                             Icon(
@@ -1309,8 +1334,8 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = Icons.Default.TableChart,
                         tint = MaterialTheme.colorScheme.primary,
-                        title = "Ekspor Excel",
-                        subtitle = "Semua bulan jadi satu file .xlsx",
+                        title = tr("Ekspor Excel", "Excel Export"),
+                        subtitle = tr("Semua bulan jadi satu file .xlsx", "All months into one .xlsx file"),
                         onClick = onEksporExcel,
                         trailing = {
                             Icon(
@@ -1324,7 +1349,7 @@ fun LainnyaTab(
                     LainnyaMenuRow(
                         icon = Icons.Default.CloudSync,
                         tint = MaterialTheme.colorScheme.primary,
-                        title = "Mode Online",
+                        title = tr("Mode Online", "Online Mode"),
                         subtitle = statusOnline,
                         onClick = onModeOnline,
                         trailing = {
@@ -1347,8 +1372,8 @@ fun LainnyaTab(
                 LainnyaMenuRow(
                     icon = Icons.Default.Info,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    title = "Tentang",
-                    subtitle = "Buku kas bulanan, Tunai & QRIS terpisah",
+                    title = tr("Tentang", "About"),
+                    subtitle = tr("Buku kas bulanan, Tunai & QRIS terpisah", "A monthly cash book, Cash & QRIS kept separate"),
                     onClick = onTentang,
                     trailing = {
                         Icon(
@@ -1365,12 +1390,12 @@ fun LainnyaTab(
     if (editNama) {
         AlertDialog(
             onDismissRequest = { editNama = false },
-            title = { Text("Nama Usaha") },
+            title = { Text(tr("Nama Usaha", "Business Name")) },
             text = {
                 OutlinedTextField(
                     value = namaDraft,
                     onValueChange = { namaDraft = it },
-                    label = { Text("Nama usaha") },
+                    label = { Text(tr("Nama usaha", "Business name")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1379,10 +1404,10 @@ fun LainnyaTab(
                 TextButton(onClick = {
                     onNamaApotekChange(namaDraft.trim())
                     editNama = false
-                }) { Text("Simpan") }
+                }) { Text(tr("Simpan", "Save")) }
             },
             dismissButton = {
-                TextButton(onClick = { editNama = false }) { Text("Batal") }
+                TextButton(onClick = { editNama = false }) { Text(tr("Batal", "Cancel")) }
             }
         )
     }
@@ -1462,10 +1487,10 @@ fun ModeOnlineScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    Icon(Icons.Default.ArrowBack, contentDescription = tr("Kembali", "Back"))
                 }
                 Text(
-                    "Mode Online",
+                    tr("Mode Online", "Online Mode"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -1480,19 +1505,26 @@ fun ModeOnlineScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                "Belum dikonfigurasi",
+                                tr("Belum dikonfigurasi", "Not configured"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Mode online memakai Firebase. Pemilik aplikasi perlu " +
+                                tr("Mode online memakai Firebase. Pemilik aplikasi perlu " +
                                     "membuat project Firebase, menaruh file " +
                                     "google-services.json ke dalam aplikasi, lalu " +
                                     "menyalakan login email dan database Firestore. " +
                                     "Langkah lengkapnya ada di dokumen ONLINE.md di repo. " +
                                     "Selama belum diatur, aplikasi berjalan offline " +
                                     "seperti biasa dan tidak ada yang berubah.",
+                                    "Online mode uses Firebase. The app owner needs to " +
+                                    "create a Firebase project, place the " +
+                                    "google-services.json file in the app, then enable " +
+                                    "email sign-in and the Firestore database. The full " +
+                                    "steps are in the ONLINE.md document in the repo. " +
+                                    "Until it is set up, the app runs offline as usual " +
+                                    "and nothing changes."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1507,15 +1539,17 @@ fun ModeOnlineScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                "Masuk untuk menyalakan sinkronisasi",
+                                tr("Masuk untuk menyalakan sinkronisasi", "Sign in to turn on sync"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Data tetap tersimpan di HP ini; salinannya " +
+                                tr("Data tetap tersimpan di HP ini; salinannya " +
                                     "tersinkron ke akunmu supaya tidak hilang " +
                                     "saat ganti HP.",
+                                    "Data stays on this phone; a copy syncs to your " +
+                                    "account so it is not lost when you change phones."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1532,13 +1566,13 @@ fun ModeOnlineScreen(
                                 ) {
                                     LogoGoogle(modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Masuk dengan Google")
+                                    Text(tr("Masuk dengan Google", "Sign in with Google"))
                                 }
                                 Spacer(Modifier.height(16.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     HorizontalDivider(modifier = Modifier.weight(1f))
                                     Text(
-                                        "  atau pakai email  ",
+                                        tr("  atau pakai email  ", "  or use email  "),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1558,7 +1592,7 @@ fun ModeOnlineScreen(
                             OutlinedTextField(
                                 value = kataSandi,
                                 onValueChange = { kataSandi = it },
-                                label = { Text("Kata sandi (min. 6 karakter)") },
+                                label = { Text(tr("Kata sandi (min. 6 karakter)", "Password (min. 6 characters)")) },
                                 singleLine = true,
                                 visualTransformation = PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -1569,18 +1603,18 @@ fun ModeOnlineScreen(
                                 onClick = { onMasuk(email, kataSandi) },
                                 enabled = !sibuk && masukanSah,
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text(if (sibuk) "Memproses..." else "Masuk") }
+                            ) { Text(if (sibuk) tr("Memproses...", "Working...") else tr("Masuk", "Sign In")) }
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(
                                 onClick = { onDaftar(email, kataSandi) },
                                 enabled = !sibuk && masukanSah,
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Daftar Akun Baru") }
+                            ) { Text(tr("Daftar Akun Baru", "Create Account")) }
                             TextButton(
                                 onClick = { onResetSandi(email) },
                                 enabled = !sibuk && email.contains("@"),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Lupa kata sandi?") }
+                            ) { Text(tr("Lupa kata sandi?", "Forgot password?")) }
                         }
                     }
                 } else {
@@ -1592,7 +1626,7 @@ fun ModeOnlineScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                "Terhubung",
+                                tr("Terhubung", "Connected"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1605,9 +1639,9 @@ fun ModeOnlineScreen(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 if (sinkronTerakhir > 0L) {
-                                    "Sinkron terakhir: " + formatTanggalWaktu(sinkronTerakhir)
+                                    tr("Sinkron terakhir: ", "Last synced: ") + formatTanggalWaktu(sinkronTerakhir, LocalBahasa.current)
                                 } else {
-                                    "Belum pernah sinkron"
+                                    tr("Belum pernah sinkron", "Never synced")
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1617,13 +1651,13 @@ fun ModeOnlineScreen(
                                 onClick = onSinkron,
                                 enabled = !sibuk,
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text(if (sibuk) "Menyinkronkan..." else "Sinkronkan Sekarang") }
+                            ) { Text(if (sibuk) tr("Menyinkronkan...", "Syncing...") else tr("Sinkronkan Sekarang", "Sync Now")) }
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(
                                 onClick = onKeluar,
                                 enabled = !sibuk,
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Keluar") }
+                            ) { Text(tr("Keluar", "Sign Out")) }
                         }
                     }
                 }
@@ -1637,9 +1671,12 @@ fun ModeOnlineScreen(
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Sinkron berjalan otomatis setiap ada perubahan dan berkala " +
+                    tr("Sinkron berjalan otomatis setiap ada perubahan dan berkala " +
                         "tiap beberapa jam saat ada internet. Konflik data " +
                         "diselesaikan dengan aturan: yang terakhir diubah yang menang.",
+                        "Sync runs automatically whenever data changes and " +
+                        "periodically every few hours while online. Data " +
+                        "conflicts resolve by one rule: the last change wins."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1703,7 +1740,7 @@ fun LayarLogin(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            "Masuk untuk menyinkronkan buku kasmu",
+                            tr("Masuk untuk menyinkronkan buku kasmu", "Sign in to sync your cash book"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1720,13 +1757,13 @@ fun LayarLogin(
                             ) {
                                 LogoGoogle(modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Masuk dengan Google")
+                                Text(tr("Masuk dengan Google", "Sign in with Google"))
                             }
                             Spacer(Modifier.height(16.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 HorizontalDivider(modifier = Modifier.weight(1f))
                                 Text(
-                                    "  atau pakai email  ",
+                                    tr("  atau pakai email  ", "  or use email  "),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1746,7 +1783,7 @@ fun LayarLogin(
                         OutlinedTextField(
                             value = kataSandi,
                             onValueChange = { kataSandi = it },
-                            label = { Text("Kata sandi (min. 6 karakter)") },
+                            label = { Text(tr("Kata sandi (min. 6 karakter)", "Password (min. 6 characters)")) },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -1757,17 +1794,17 @@ fun LayarLogin(
                             onClick = { onMasuk(email, kataSandi) },
                             enabled = !sibuk && masukanSah,
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (sibuk) "Memproses..." else "Masuk") }
+                        ) { Text(if (sibuk) tr("Memproses...", "Working...") else tr("Masuk", "Sign In")) }
                         Spacer(Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = { onDaftar(email, kataSandi) },
                             enabled = !sibuk && masukanSah,
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Daftar Akun Baru") }
+                        ) { Text(tr("Daftar Akun Baru", "Create Account")) }
                         TextButton(
                             onClick = { onResetSandi(email) },
                             enabled = !sibuk && email.contains("@")
-                        ) { Text("Lupa kata sandi?") }
+                        ) { Text(tr("Lupa kata sandi?", "Forgot password?")) }
                         if (pesanStatus != null) {
                             Spacer(Modifier.height(6.dp))
                             Text(
@@ -1780,10 +1817,10 @@ fun LayarLogin(
                         HorizontalDivider()
                         Spacer(Modifier.height(8.dp))
                         TextButton(onClick = onLewati, enabled = !sibuk) {
-                            Text("Lewati - Pakai Tanpa Akun")
+                            Text(tr("Lewati - Pakai Tanpa Akun", "Skip - Use Without an Account"))
                         }
                         Text(
-                            "Mode tamu: data hanya di HP ini, tanpa sinkronisasi.",
+                            tr("Mode tamu: data hanya di HP ini, tanpa sinkronisasi.", "Guest mode: data stays on this phone, with no sync."),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
