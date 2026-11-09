@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -1519,6 +1520,32 @@ fun ModeOnlineScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(12.dp))
+                            if (googleSiap) {
+                                Button(
+                                    onClick = onMasukGoogle,
+                                    enabled = !sibuk,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = Color(0xFF1F1F1F)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    LogoGoogle(modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Masuk dengan Google")
+                                }
+                                Spacer(Modifier.height(16.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    HorizontalDivider(modifier = Modifier.weight(1f))
+                                    Text(
+                                        "  atau pakai email  ",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    HorizontalDivider(modifier = Modifier.weight(1f))
+                                }
+                                Spacer(Modifier.height(16.dp))
+                            }
                             OutlinedTextField(
                                 value = email,
                                 onValueChange = { email = it },
@@ -1549,18 +1576,6 @@ fun ModeOnlineScreen(
                                 enabled = !sibuk && masukanSah,
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Daftar Akun Baru") }
-                            if (googleSiap) {
-                                Spacer(Modifier.height(8.dp))
-                                OutlinedButton(
-                                    onClick = onMasukGoogle,
-                                    enabled = !sibuk,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    LogoGoogle(modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Masuk dengan Google")
-                                }
-                            }
                             TextButton(
                                 onClick = { onResetSandi(email) },
                                 enabled = !sibuk && email.contains("@"),
@@ -1689,6 +1704,32 @@ fun LayarLogin(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(24.dp))
+            if (googleSiap) {
+                Button(
+                    onClick = onMasukGoogle,
+                    enabled = !sibuk,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF1F1F1F)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LogoGoogle(modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Masuk dengan Google")
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                    Text(
+                        "  atau pakai email  ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(16.dp))
+            }
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -1719,18 +1760,6 @@ fun LayarLogin(
                 enabled = !sibuk && masukanSah,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Daftar Akun Baru") }
-            if (googleSiap) {
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onMasukGoogle,
-                    enabled = !sibuk,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                                    LogoGoogle(modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Masuk dengan Google")
-                                }
-            }
             TextButton(
                 onClick = { onResetSandi(email) },
                 enabled = !sibuk && email.contains("@")
