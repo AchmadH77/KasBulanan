@@ -116,6 +116,11 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Google Sign-In through Credential Manager (the button only appears
+    // once google-services.json carries a web client id).
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     testImplementation("junit:junit:4.13.2")
     // Real org.json for BackupHelper unit tests (Android provides it on device).
