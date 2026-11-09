@@ -1,7 +1,6 @@
 package id.kasbulan.app
 
 import android.content.Intent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -222,57 +221,57 @@ fun TransaksiRow(t: TransaksiKas, clickable: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun PitaHeader(tabLabel: String, namaApotek: String, bulan: BulanKas?) {
+fun PitaHeader(namaApotek: String, bulan: BulanKas?) {
     val bulanTeks = bulan?.let { bulanLabel(it.tahun, it.bulan) }
-    Surface(color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
-                    Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            "K",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.ExtraBold,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "KasBulanan",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        "K",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleMedium
                     )
-                    Text(
-                        if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                if (bulanTeks != null) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color.Transparent,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f))
-                    ) {
-                        Text(
-                            bulanTeks,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                tabLabel + (bulanTeks?.let { " \u2014 " + it.uppercase() } ?: ""),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "KasBulanan",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (namaApotek.isNotBlank()) namaApotek else "Nama apotek belum diatur",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            if (bulanTeks != null) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f)
+                ) {
+                    Text(
+                        bulanTeks,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -327,7 +326,7 @@ fun BerandaTab(
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        PitaHeader("BERANDA", namaApotek, bulan ?: bulanTerakhir)
+        PitaHeader(namaApotek, bulan ?: bulanTerakhir)
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -775,7 +774,7 @@ fun RiwayatTab(
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
         ?: bulanList.lastOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
-        PitaHeader("RIWAYAT", namaApotek, selected)
+        PitaHeader(namaApotek, selected)
         if (selected == null) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
@@ -849,7 +848,7 @@ fun LaporanTab(
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
         ?: bulanList.lastOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
-        PitaHeader("LAPORAN", namaApotek, selected)
+        PitaHeader(namaApotek, selected)
         if (selected == null) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
