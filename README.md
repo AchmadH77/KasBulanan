@@ -2,7 +2,7 @@
 
 [![Build APK](https://github.com/AchmadH77/KasBulanan/actions/workflows/build.yml/badge.svg)](https://github.com/AchmadH77/KasBulanan/actions/workflows/build.yml)
 
-A universal monthly cash book — an offline Android app for recording
+A universal monthly cash book — an offline-first Android app for recording
 cash on a monthly rhythm: **open the month → record daily → close the book**.
 For a small shop, a food stall, a service business, or personal cash.
 
@@ -10,6 +10,11 @@ Money is split per channel, **Cash** and **QRIS**, because QRIS money is not
 in the drawer: it sits in the bank account until it is settled. A settlement
 is recorded as a **Transfer between balances**, not income, so reports never
 double-count it.
+
+The book lives on the device. An optional account-based sync can mirror it
+to the owner's own Firebase project as a cloud backup and for moving
+between devices — the app stays fully usable without an account or a
+connection.
 
 ## Features
 
@@ -36,8 +41,15 @@ double-count it.
   balance rows (Apache POI).
 - Backup & restore as a single JSON file, with a preview of the file's
   contents before any data is replaced. The More tab shows when the last
-  backup was saved and warns when the data has changed since it. No
-  account, no server, no internet.
+  backup was saved and warns when the data has changed since it.
+- Optional online mode: sign in with email or Google, and entries sync
+  both ways with Cloud Firestore (conflicts resolve last-write-wins),
+  automatically after changes, periodically, or on demand from the Mode
+  Online screen. A sync-status icon on the Home balance card shows the
+  current state.
+- When online mode is configured, the app opens on a sign-in gate with a
+  guest pass ("Lewati — Pakai Tanpa Akun"), so the offline book is never
+  locked behind an account.
 - Database safety net: an automatic copy of the database file right before
   an updated app is opened for the first time (max. 3 copies), on top of the
   manual backup.
@@ -46,9 +58,12 @@ double-count it.
 
 Kotlin + Jetpack Compose, a single `:app` module. Official Material 3
 Expressive (1.5.0-rc01, `MaterialExpressiveTheme` +
-`MotionScheme.expressive()`), Compose BOM 2026.09.00, Room 2.7.2. R8 is
-enabled for both debug and release builds. 41 unit tests run as a CI
-step before the APK is built. The project follows the Kasir pattern:
+`MotionScheme.expressive()`), Compose BOM 2026.09.00, Room 2.7.2. Online
+mode uses Firebase Authentication and Cloud Firestore (Firebase BOM
+33.5.1) behind a configuration check — without a `google-services.json`
+the online layer stays dormant and the app is purely offline. R8 is
+enabled for both debug and release builds. Requires Android 8.0 (API 26)
+or newer. 45 unit tests run as a CI step before the APK is built. The project follows the Kasir pattern:
 builds run on GitHub Actions (`workflow_dispatch`), with no Gradle wrapper —
 Gradle 9.6.0 is provided by `gradle/actions/setup-gradle`.
 
@@ -57,14 +72,17 @@ Gradle 9.6.0 is provided by `gradle/actions/setup-gradle`.
 ```
 app/src/main/java/id/kasbulan/app/
 ├── MainActivity.kt   App shell, entry form, and dialogs
-├── Screens.kt        Home, History, Report, and More tabs
+├── Screens.kt        Home, History, Report, and More tabs,
+│                     the sign-in gate, and the Mode Online screen
 ├── KasLogic.kt       Pure cash logic (balances, summaries, reports)
 ├── Theme.kt          Midnight-blue Material 3 Expressive theme
 └── data/             Room (Models, KasRepository), BackupHelper,
-                      ExcelExporter, DatabaseSnapshot (update safety net)
+                      ExcelExporter, DatabaseSnapshot (update safety net),
+                      SyncLogic and OnlineSync (Firebase sync)
 ```
 
 Full explanation: [docs/ARSITEKTUR.md](docs/ARSITEKTUR.md) ·
+Online mode setup: [docs/ONLINE.md](docs/ONLINE.md) ·
 Change history: [CHANGELOG.md](CHANGELOG.md)
 
 ## Build
@@ -76,6 +94,11 @@ Change history: [CHANGELOG.md](CHANGELOG.md)
    `KASBULAN_KEYSTORE_BASE64` secret is set (its value = the base64 of the
    `kasbulan.p12` file, alias/password `kasbulan`); without the secret, the
    debug build uses the built-in debug key.
+3. Online mode activates when `app/google-services.json` is present. This
+   repository carries the owner's Firebase Android config; to run the app
+   against your own Firebase project, replace that file, enable
+   Email/Password (and Google) in Firebase Authentication, and publish
+   `firestore.rules` — see [docs/ONLINE.md](docs/ONLINE.md).
 
 ## License
 
