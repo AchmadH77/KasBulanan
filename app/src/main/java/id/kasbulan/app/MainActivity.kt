@@ -72,6 +72,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -116,6 +117,9 @@ class MainActivity : ComponentActivity() {
             val prefs = remember { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
             var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
             var namaApotek by remember { mutableStateOf(prefs.getString("nama_apotek", "") ?: "") }
+            var bahasa by remember {
+                mutableStateOf(if (prefs.getString("bahasa", "id") == "en") BahasaApp.EN else BahasaApp.ID)
+            }
             KasBulananTheme(darkTheme = dark) {
                 KasBulananApp(
                     repository = repository,
@@ -128,6 +132,11 @@ class MainActivity : ComponentActivity() {
                     onNamaApotekChange = { nilai ->
                         namaApotek = nilai
                         prefs.edit().putString("nama_apotek", nilai).apply()
+                    },
+                    bahasa = bahasa,
+                    onBahasaChange = {
+                        bahasa = if (bahasa == BahasaApp.ID) BahasaApp.EN else BahasaApp.ID
+                        prefs.edit().putString("bahasa", if (bahasa == BahasaApp.ID) "id" else "en").apply()
                     }
                 )
             }
@@ -145,7 +154,9 @@ fun KasBulananApp(
     dark: Boolean,
     onToggleDark: (Boolean) -> Unit,
     namaApotek: String,
-    onNamaApotekChange: (String) -> Unit
+    onNamaApotekChange: (String) -> Unit,
+    bahasa: BahasaApp,
+    onBahasaChange: () -> Unit
 ) {
     val bulanList by repository.bulanList.collectAsState(initial = emptyList())
     val transaksiList by repository.transaksiList.collectAsState(initial = emptyList())
@@ -157,7 +168,7 @@ fun KasBulananApp(
     val bulanTerakhir = bulanList.lastOrNull()
     val labelBerikutnya = bulanTerakhir?.let {
         val ym = YearMonth.of(it.tahun, it.bulan).plusMonths(1)
-        bulanLabel(ym.year, ym.monthValue)
+        bulanLabel(ym.year, ym.monthValue, bahasa)
     }
 
     var showForm by remember { mutableStateOf(false) }
@@ -183,8 +194,8 @@ fun KasBulananApp(
     var lastBackupTanda by remember { mutableStateOf(prefs.getString("last_backup_tanda", "") ?: "") }
     val tandaData = transaksiList.size.toString() + ":" + transaksiList.sumOf { it.nominal } + ":" + bulanList.size
     val peringatanBackup = when {
-        lastBackupAt == 0L && transaksiList.isNotEmpty() -> "Belum pernah dibackup"
-        lastBackupAt > 0L && lastBackupTanda != tandaData -> "Ada perubahan sejak backup terakhir"
+        lastBackupAt == 0L && transaksiList.isNotEmpty() -> tr("Belum pernah dibackup", "Never backed up")
+        lastBackupAt > 0L && lastBackupTanda != tandaData -> tr("Ada perubahan sejak backup terakhir", "Data changed since the last backup")
         else -> null
     }
 
@@ -223,15 +234,15 @@ fun KasBulananApp(
                     prefs.edit().putLong("online_sync_terakhir", kini).apply()
                     syncTerakhir = kini
                     statusSync = StatusSync.BERHASIL
-                    pesanOnline = "Sinkron berhasil: " + hasil.didorong +
-                        " terkirim, " + hasil.ditarik + " diterima"
+                    pesanOnline = teks(bahasa, "Sinkron berhasil: ", "Sync complete: ") + hasil.didorong +
+                        teks(bahasa, " terkirim, ", " sent, ") + hasil.ditarik + teks(bahasa, " diterima", " received")
                 }
                 is HasilSync.Gagal -> {
                     statusSync = StatusSync.GAGAL
-                    pesanOnline = "Sinkron gagal: " + hasil.pesan
+                    pesanOnline = teks(bahasa, "Sinkron gagal: ", "Sync failed: ") + hasil.pesan
                 }
-                HasilSync.BelumMasuk -> pesanOnline = "Belum masuk"
-                HasilSync.BelumDikonfigurasi -> pesanOnline = "Firebase belum dikonfigurasi"
+                HasilSync.BelumMasuk -> pesanOnline = teks(bahasa, "Belum masuk", "Not signed in")
+                HasilSync.BelumDikonfigurasi -> pesanOnline = teks(bahasa, "Firebase belum dikonfigurasi", "Firebase is not configured")
             }
             onlineSibuk = false
         }
@@ -243,11 +254,11 @@ fun KasBulananApp(
         scope.launch {
             try {
                 emailOnline = FirebaseKit.masukDenganEmail(email.trim(), sandi)
-                pesanOnline = "Berhasil masuk"
+                pesanOnline = teks(bahasa, "Berhasil masuk", "Signed in")
                 onlineSibuk = false
                 jalankanSync()
             } catch (e: Exception) {
-                pesanOnline = "Gagal masuk: " + (e.message ?: "periksa email dan kata sandi")
+                pesanOnline = teks(bahasa, "Gagal masuk: ", "Sign-in failed: ") + (e.message ?: teks(bahasa, "periksa email dan kata sandi", "check your email and password"))
                 onlineSibuk = false
             }
         }
@@ -258,11 +269,11 @@ fun KasBulananApp(
         scope.launch {
             try {
                 emailOnline = FirebaseKit.daftarDenganEmail(email.trim(), sandi)
-                pesanOnline = "Akun dibuat dan sudah masuk"
+                pesanOnline = teks(bahasa, "Akun dibuat dan sudah masuk", "Account created and signed in")
                 onlineSibuk = false
                 jalankanSync()
             } catch (e: Exception) {
-                pesanOnline = "Gagal daftar: " + (e.message ?: "coba lagi")
+                pesanOnline = teks(bahasa, "Gagal daftar: ", "Sign-up failed: ") + (e.message ?: teks(bahasa, "coba lagi", "try again"))
                 onlineSibuk = false
             }
         }
@@ -273,12 +284,12 @@ fun KasBulananApp(
         scope.launch {
             try {
                 emailOnline = FirebaseKit.masukDenganGoogle(context)
-                pesanOnline = "Berhasil masuk dengan Google"
+                pesanOnline = teks(bahasa, "Berhasil masuk dengan Google", "Signed in with Google")
                 statusSync = StatusSync.PROSES
                 onlineSibuk = false
                 jalankanSync()
             } catch (e: Exception) {
-                pesanOnline = "Gagal masuk dengan Google: " + (e.message ?: "dibatalkan")
+                pesanOnline = teks(bahasa, "Gagal masuk dengan Google: ", "Google sign-in failed: ") + (e.message ?: teks(bahasa, "dibatalkan", "cancelled"))
                 onlineSibuk = false
             }
         }
@@ -289,9 +300,9 @@ fun KasBulananApp(
         scope.launch {
             try {
                 FirebaseKit.kirimResetSandi(email.trim())
-                pesanOnline = "Email reset kata sandi terkirim ke " + email.trim()
+                pesanOnline = teks(bahasa, "Email reset kata sandi terkirim ke ", "Password reset email sent to ") + email.trim()
             } catch (e: Exception) {
-                pesanOnline = "Gagal mengirim reset: " + (e.message ?: "periksa alamat email")
+                pesanOnline = teks(bahasa, "Gagal mengirim reset: ", "Could not send the reset: ") + (e.message ?: teks(bahasa, "periksa alamat email", "check the email address"))
             }
             onlineSibuk = false
         }
@@ -324,7 +335,7 @@ fun KasBulananApp(
                         false
                     }
                 }
-                pesan = if (ok) "Ekspor Excel tersimpan" else "Ekspor Excel gagal"
+                pesan = if (ok) teks(bahasa, "Ekspor Excel tersimpan", "Excel export saved") else teks(bahasa, "Ekspor Excel gagal", "Excel export failed")
             }
         }
     }
@@ -366,7 +377,7 @@ fun KasBulananApp(
                     lastBackupName = namaFile
                     lastBackupTanda = tandaData
                 }
-                pesan = if (ok) "Backup tersimpan" else "Backup gagal"
+                pesan = if (ok) teks(bahasa, "Backup tersimpan", "Backup saved") else teks(bahasa, "Backup gagal", "Backup failed")
             }
         }
     }
@@ -384,7 +395,7 @@ fun KasBulananApp(
                 }
                 val data = teks?.let { BackupHelper.parseBackupJson(it) }
                 if (data != null) pendingRestore = data
-                else pesan = "File bukan backup KasBulanan atau rusak"
+                else pesan = teks(bahasa, "File bukan backup KasBulanan atau rusak", "The file is not a KasBulanan backup or is damaged")
             }
         }
     }
@@ -403,6 +414,7 @@ fun KasBulananApp(
     BackHandler(enabled = showOnline) { showOnline = false }
     BackHandler(enabled = showForm) { showForm = false }
 
+    CompositionLocalProvider(LocalBahasa provides bahasa) {
     // Gerbang login (G2): hanya saat Firebase terkonfigurasi, belum
     // ada yang masuk, dan tamu belum memilih Lewati pada sesi ini.
     val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
@@ -439,16 +451,16 @@ fun KasBulananApp(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            ItemPillNav(Icons.Default.Home, "Beranda", tab == 0) {
+                            ItemPillNav(Icons.Default.Home, tr("Beranda", "Home"), tab == 0) {
                                 showRekapHariIni = false; tab = 0
                             }
-                            ItemPillNav(Icons.Default.History, "Riwayat", tab == 1) {
+                            ItemPillNav(Icons.Default.History, tr("Riwayat", "History"), tab == 1) {
                                 showRekapHariIni = false; tab = 1
                             }
-                            ItemPillNav(Icons.Default.Assessment, "Laporan", tab == 2) {
+                            ItemPillNav(Icons.Default.Assessment, tr("Laporan", "Report"), tab == 2) {
                                 showRekapHariIni = false; tab = 2
                             }
-                            ItemPillNav(Icons.Default.MoreHoriz, "Lainnya", tab == 3) {
+                            ItemPillNav(Icons.Default.MoreHoriz, tr("Lainnya", "More"), tab == 3) {
                                 showRekapHariIni = false; tab = 3
                             }
                         }
@@ -461,7 +473,7 @@ fun KasBulananApp(
                 ExtendedFloatingActionButton(
                     onClick = { bukaForm(null) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Catat") }
+                    text = { Text(tr("Catat", "Record")) }
                 )
             }
         }
@@ -534,7 +546,7 @@ fun KasBulananApp(
                     onBackup = { backupLauncher.launch("kasbulanan-backup.json") },
                     onEksporExcel = {
                         if (bulanList.isEmpty()) {
-                            pesan = "Belum ada data untuk diekspor"
+                            pesan = teks(bahasa, "Belum ada data untuk diekspor", "No data to export yet")
                         } else {
                             eksporLauncher.launch("kasbulanan-ekspor.xlsx")
                         }
@@ -542,11 +554,13 @@ fun KasBulananApp(
                     onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
                     onTentang = { showTentang = true },
                     statusOnline = when {
-                        !onlineSiap -> "Belum dikonfigurasi"
-                        emailOnline != null -> "Terhubung: " + emailOnline
-                        else -> "Masuk untuk sinkron otomatis"
+                        !onlineSiap -> tr("Belum dikonfigurasi", "Not configured")
+                        emailOnline != null -> tr("Terhubung: ", "Connected: ") + emailOnline
+                        else -> tr("Masuk untuk sinkron otomatis", "Sign in for automatic sync")
                     },
-                    onModeOnline = { showOnline = true }
+                    onModeOnline = { showOnline = true },
+                    bahasa = bahasa,
+                    onGantiBahasa = onBahasaChange
                 )
             }
             }
@@ -566,7 +580,7 @@ fun KasBulananApp(
                         FirebaseKit.keluar()
                         emailOnline = null
                         statusSync = StatusSync.BELUM_MASUK
-                        pesanOnline = "Sudah keluar - data di HP ini tidak berubah"
+                        pesanOnline = teks(bahasa, "Sudah keluar - data di HP ini tidak berubah", "Signed out - the data on this phone is unchanged")
                     },
                     onSinkron = { jalankanSync() },
                     onBack = { showOnline = false }
@@ -622,7 +636,7 @@ fun KasBulananApp(
             onConfirm = {
                 scope.launch { repository.tutupBulan(target) }
                 tutupTarget = null
-                pesan = "Buku " + bulanLabel(target.tahun, target.bulan) + " ditutup"
+                pesan = teks(bahasa, "Buku ", "Book ") + bulanLabel(target.tahun, target.bulan, bahasa) + teks(bahasa, " ditutup", " closed")
             }
         )
     }
@@ -638,9 +652,10 @@ fun KasBulananApp(
             onConfirm = {
                 scope.launch { repository.replaceAll(data.bulan, data.transaksi) }
                 pendingRestore = null
-                pesan = "Data dipulihkan dari backup"
+                pesan = teks(bahasa, "Data dipulihkan dari backup", "Data restored from backup")
             }
         )
+    }
     }
 }
 
@@ -677,7 +692,7 @@ private fun PilihTanggalDialog(
             }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
+            TextButton(onClick = onDismiss) { Text(tr("Batal", "Cancel")) }
         }
     ) {
         DatePicker(state = state, showModeToggle = false)
@@ -751,10 +766,10 @@ fun CatatTransaksiScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                Icon(Icons.Default.ArrowBack, contentDescription = tr("Kembali", "Back"))
             }
             Text(
-                if (initial == null) "Catat Transaksi" else "Ubah Transaksi",
+                if (initial == null) tr("Catat Transaksi", "Record Transaction") else tr("Ubah Transaksi", "Edit Transaction"),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -767,7 +782,7 @@ fun CatatTransaksiScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                listOf(JENIS_MASUK to "Masuk", JENIS_KELUAR to "Keluar").forEachIndexed { i, (nilai, label) ->
+                listOf(JENIS_MASUK to tr("Masuk", "Income"), JENIS_KELUAR to tr("Keluar", "Expense")).forEachIndexed { i, (nilai, label) ->
                     SegmentedButton(
                         selected = jenis == nilai,
                         onClick = { jenis = nilai },
@@ -775,9 +790,9 @@ fun CatatTransaksiScreen(
                     ) { Text(label) }
                 }
             }
-            Text("Saluran Uang", style = MaterialTheme.typography.labelLarge)
+            Text(tr("Saluran Uang", "Money Channel"), style = MaterialTheme.typography.labelLarge)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                listOf(SALURAN_TUNAI to "Tunai", SALURAN_QRIS to "QRIS").forEachIndexed { i, (nilai, label) ->
+                listOf(SALURAN_TUNAI to tr("Tunai", "Cash"), SALURAN_QRIS to "QRIS").forEachIndexed { i, (nilai, label) ->
                     SegmentedButton(
                         selected = saluran == nilai,
                         onClick = { saluran = nilai },
@@ -785,8 +800,8 @@ fun CatatTransaksiScreen(
                     ) { Text(label) }
                 }
             }
-            MoneyField("Nominal", nominalRaw) { nominalRaw = it }
-            Text("Kategori", style = MaterialTheme.typography.labelLarge)
+            MoneyField(tr("Nominal", "Amount"), nominalRaw) { nominalRaw = it }
+            Text(tr("Kategori", "Category"), style = MaterialTheme.typography.labelLarge)
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -796,7 +811,7 @@ fun CatatTransaksiScreen(
                     FilterChip(
                         selected = kategori == k,
                         onClick = { kategori = k },
-                        label = { Text(k) }
+                        label = { Text(tampilKategori(k)) }
                     )
                 }
                 if (kategori !in daftarKategori) {
@@ -820,7 +835,7 @@ fun CatatTransaksiScreen(
                         teksKategori = if (kategori !in daftarKategori) kategori else ""
                         showKategoriDialog = true
                     },
-                    label = { Text("+ Buat Kategori") },
+                    label = { Text(tr("+ Buat Kategori", "+ New Category")) },
                     colors = FilterChipDefaults.filterChipColors(labelColor = warnaEmas),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
@@ -830,13 +845,13 @@ fun CatatTransaksiScreen(
                     )
                 )
             }
-            Text("Tanggal", style = MaterialTheme.typography.labelLarge)
+            Text(tr("Tanggal", "Date"), style = MaterialTheme.typography.labelLarge)
             OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(formatTanggal(tanggal))
+                Text(formatTanggal(tanggal, LocalBahasa.current))
             }
-            Text("Catatan (boleh kosong)", style = MaterialTheme.typography.labelLarge)
+            Text(tr("Catatan (boleh kosong)", "Note (optional)"), style = MaterialTheme.typography.labelLarge)
             OutlinedTextField(
                 value = catatan,
                 onValueChange = { catatan = it },
@@ -857,7 +872,7 @@ fun CatatTransaksiScreen(
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Text("Simpan", style = MaterialTheme.typography.titleMedium)
+                Text(tr("Simpan", "Save"), style = MaterialTheme.typography.titleMedium)
             }
             if (initial == null && onSaveAndAgain != null) {
                 Spacer(Modifier.height(8.dp))
@@ -873,21 +888,21 @@ fun CatatTransaksiScreen(
                         .fillMaxWidth()
                         .height(48.dp)
                 ) {
-                    Text("Simpan & Catat Lagi")
+                    Text(tr("Simpan & Catat Lagi", "Save & Record Another"))
                 }
                 if (jumlahTersimpanLagi > 0) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        jumlahTersimpanLagi.toString() + " catatan tersimpan - lanjutkan berikutnya",
+                        jumlahTersimpanLagi.toString() + tr(" catatan tersimpan - lanjutkan berikutnya", " records saved - keep going"),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-            TextButton(onClick = onBack) { Text("Batal") }
+            TextButton(onClick = onBack) { Text(tr("Batal", "Cancel")) }
             if (initial != null) {
                 TextButton(onClick = { confirmDelete = true }) {
-                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -895,12 +910,12 @@ fun CatatTransaksiScreen(
     if (showKategoriDialog) {
         AlertDialog(
             onDismissRequest = { showKategoriDialog = false },
-            title = { Text("Kategori Baru") },
+            title = { Text(tr("Kategori Baru", "New Category")) },
             text = {
                 OutlinedTextField(
                     value = teksKategori,
                     onValueChange = { teksKategori = it },
-                    label = { Text("Nama kategori") },
+                    label = { Text(tr("Nama kategori", "Category name")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -912,10 +927,10 @@ fun CatatTransaksiScreen(
                         kategori = teksKategori.trim()
                         showKategoriDialog = false
                     }
-                ) { Text("Pakai") }
+                ) { Text(tr("Pakai", "Use")) }
             },
             dismissButton = {
-                TextButton(onClick = { showKategoriDialog = false }) { Text("Batal") }
+                TextButton(onClick = { showKategoriDialog = false }) { Text(tr("Batal", "Cancel")) }
             }
         )
     }
@@ -930,15 +945,15 @@ fun CatatTransaksiScreen(
     if (confirmDelete && initial != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Hapus transaksi ini?") },
-            text = { Text("Catatan akan dihapus permanen dan saldo dihitung ulang.") },
+            title = { Text(tr("Hapus transaksi ini?", "Delete this transaction?")) },
+            text = { Text(tr("Catatan akan dihapus permanen dan saldo dihitung ulang.", "The record will be permanently deleted and the balance recomputed.")) },
             confirmButton = {
                 TextButton(onClick = { onDelete(initial) }) {
-                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Batal") }
+                TextButton(onClick = { confirmDelete = false }) { Text(tr("Batal", "Cancel")) }
             }
         )
     }
@@ -974,17 +989,17 @@ fun TransferDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    if (initial == null) "Transfer Antar Saldo" else "Ubah Transfer",
+                    if (initial == null) tr("Transfer Antar Saldo", "Transfer Between Balances") else tr("Ubah Transfer", "Edit Transfer"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Perpindahan uang antar dompet - bukan pemasukan atau pengeluaran, jadi total kas tidak berubah.",
+                    tr("Perpindahan uang antar dompet - bukan pemasukan atau pengeluaran, jadi total kas tidak berubah.", "Moving money between balances - not income or an expense, so the cash total does not change."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(true to "QRIS \u2192 Tunai", false to "Tunai \u2192 QRIS").forEachIndexed { i, (nilai, label) ->
+                    listOf(true to "QRIS \u2192 " + tr("Tunai", "Cash"), false to tr("Tunai", "Cash") + " \u2192 QRIS").forEachIndexed { i, (nilai, label) ->
                         SegmentedButton(
                             selected = dariQris == nilai,
                             onClick = { dariQris = nilai },
@@ -992,26 +1007,26 @@ fun TransferDialog(
                         ) { Text(label) }
                     }
                 }
-                MoneyField("Nominal yang dipindahkan", nominalRaw) { nominalRaw = it }
+                MoneyField(tr("Nominal yang dipindahkan", "Amount to move"), nominalRaw) { nominalRaw = it }
                 OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Tanggal: " + formatTanggal(tanggal))
+                    Text(tr("Tanggal: ", "Date: ") + formatTanggal(tanggal, LocalBahasa.current))
                 }
                 OutlinedTextField(
                     value = catatan,
                     onValueChange = { catatan = it },
-                    label = { Text("Catatan (boleh kosong)") },
+                    label = { Text(tr("Catatan (boleh kosong)", "Note (optional)")) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth()) {
                     if (initial != null) {
                         TextButton(onClick = { confirmDelete = true }) {
-                            Text("Hapus", color = MaterialTheme.colorScheme.error)
+                            Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
                         }
                     }
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("Batal") }
+                    TextButton(onClick = onDismiss) { Text(tr("Batal", "Cancel")) }
                     Button(
                         enabled = nominal > 0,
                         onClick = {
@@ -1029,7 +1044,7 @@ fun TransferDialog(
                                 )
                             )
                         }
-                    ) { Text("Simpan") }
+                    ) { Text(tr("Simpan", "Save")) }
                 }
             }
         }
@@ -1045,15 +1060,15 @@ fun TransferDialog(
     if (confirmDelete && initial != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Hapus transfer ini?") },
-            text = { Text("Catatan akan dihapus permanen dan saldo dihitung ulang.") },
+            title = { Text(tr("Hapus transfer ini?", "Delete this transfer?")) },
+            text = { Text(tr("Catatan akan dihapus permanen dan saldo dihitung ulang.", "The record will be permanently deleted and the balance recomputed.")) },
             confirmButton = {
                 TextButton(onClick = { onDelete(initial) }) {
-                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Batal") }
+                TextButton(onClick = { confirmDelete = false }) { Text(tr("Batal", "Cancel")) }
             }
         )
     }
@@ -1073,32 +1088,32 @@ fun TutupBukuDialog(
     val ringkasan = ringkasanBulan(transaksi, bulan.id)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tutup Buku " + bulanLabel(bulan.tahun, bulan.bulan) + "?") },
+        title = { Text(tr("Tutup Buku ", "Close the Book: ") + bulanLabel(bulan.tahun, bulan.bulan, LocalBahasa.current) + "?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Total Masuk: " + formatRupiah(ringkasan.totalMasuk))
-                Text("Total Keluar: " + formatRupiah(ringkasan.totalKeluar))
+                Text(tr("Total Masuk: ", "Total Income: ") + formatRupiah(ringkasan.totalMasuk))
+                Text(tr("Total Keluar: ", "Total Expenses: ") + formatRupiah(ringkasan.totalKeluar))
                 Text(
-                    "Saldo Akhir: " + formatRupiah(saldo.total),
+                    tr("Saldo Akhir: ", "Closing Balance: ") + formatRupiah(saldo.total),
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Tunai " + formatRupiah(saldo.tunai) + " - QRIS " + formatRupiah(saldo.qris),
+                    tr("Tunai ", "Cash ") + formatRupiah(saldo.tunai) + " - QRIS " + formatRupiah(saldo.qris),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "Setelah ditutup, bulan ini terkunci dan tidak bisa diubah. Bulan berikutnya dibuka; saldo berjalan terus dari seluruh catatan.",
+                    tr("Setelah ditutup, bulan ini terkunci dan tidak bisa diubah. Bulan berikutnya dibuka; saldo berjalan terus dari seluruh catatan.", "Once closed, this month is locked and cannot be changed. The next month opens; the balance keeps running from all records."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Tutup Buku") }
+            TextButton(onClick = onConfirm) { Text(tr("Tutup Buku", "Close Book")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
+            TextButton(onClick = onDismiss) { Text(tr("Batal", "Cancel")) }
         }
     )
 }
@@ -1163,7 +1178,7 @@ fun TentangDialog(onDismiss: () -> Unit) {
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "Buku Kas Bulanan",
+                                    tr("Buku Kas Bulanan", "Monthly Cash Book"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -1171,14 +1186,14 @@ fun TentangDialog(onDismiss: () -> Unit) {
                         }
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                "VERSI 1.0.0",
+                                tr("VERSI 1.0.0", "VERSION 1.0.0"),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
-                                "SEJAK 2026",
+                                tr("SEJAK 2026", "SINCE 2026"),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -1186,18 +1201,18 @@ fun TentangDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
-                Text("Buku kas bulanan untuk usaha dan pemakaian sehari-hari, dengan pemisahan uang Tunai dan QRIS, siklus tutup buku bulanan, backup JSON, dan ekspor Excel.")
-                Text("Semua data tersimpan di HP ini, tanpa akun dan tanpa server.")
+                Text(tr("Buku kas bulanan untuk usaha dan pemakaian sehari-hari, dengan pemisahan uang Tunai dan QRIS, siklus tutup buku bulanan, backup JSON, dan ekspor Excel.", "A monthly cash book for businesses and everyday use, with Cash and QRIS kept separate, a monthly book-closing cycle, JSON backup, and Excel export."))
+                Text(tr("Semua data tersimpan di HP ini, tanpa akun dan tanpa server.", "All data is stored on this phone, with no account and no server."))
                 HorizontalDivider()
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("Pengembang", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Pengembang", "Developer"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
                     Text("Achmad Hidayatullah", fontWeight = FontWeight.SemiBold)
                 }
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("Lisensi", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Lisensi", "License"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
-                    Text("Hak cipta dilindungi", fontWeight = FontWeight.SemiBold)
+                    Text(tr("Hak cipta dilindungi", "All rights reserved"), fontWeight = FontWeight.SemiBold)
                 }
                 Text(
                     "\u00a9 2026 Achmad Hidayatullah",
@@ -1207,7 +1222,7 @@ fun TentangDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Tutup") }
+            TextButton(onClick = onDismiss) { Text(tr("Tutup", "Close")) }
         }
     )
 }
@@ -1222,27 +1237,27 @@ fun RestoreConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Pulihkan Data dari Backup?") },
+        title = { Text(tr("Pulihkan Data dari Backup?", "Restore Data from Backup?")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    "File berisi " + data.bulan.size + " bulan dan " + data.transaksi.size + " transaksi" +
-                        (if (data.exportedAtMillis > 0) " (dibuat " + formatTanggal(data.exportedAtMillis) + ")" else "") + "."
+                    tr("File berisi ", "The file contains ") + data.bulan.size + tr(" bulan dan ", " months and ") + data.transaksi.size + tr(" transaksi", " transactions") +
+                        (if (data.exportedAtMillis > 0) tr(" (dibuat ", " (created ") + formatTanggal(data.exportedAtMillis, LocalBahasa.current) + ")" else "") + "."
                 )
                 Text(
-                    "Data saat ini (" + jumlahBulanSaatIni + " bulan, " + jumlahTransaksiSaatIni +
-                        " transaksi) akan DIGANTI seluruhnya.",
+                    tr("Data saat ini (", "Current data (") + jumlahBulanSaatIni + tr(" bulan, ", " months, ") + jumlahTransaksiSaatIni +
+                        tr(" transaksi) akan DIGANTI seluruhnya.", " transactions) will be REPLACED entirely."),
                     fontWeight = FontWeight.SemiBold
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Pulihkan Data", color = MaterialTheme.colorScheme.error)
+                Text(tr("Pulihkan Data", "Restore Data"), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
+            TextButton(onClick = onDismiss) { Text(tr("Batal", "Cancel")) }
         }
     )
 }
