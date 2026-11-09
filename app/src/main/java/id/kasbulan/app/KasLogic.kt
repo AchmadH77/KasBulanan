@@ -32,8 +32,27 @@ val NAMA_BULAN = listOf(
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 )
 
-fun bulanLabel(tahun: Int, bulan: Int): String =
-    "${NAMA_BULAN[(bulan - 1).coerceIn(0, 11)]} $tahun"
+val NAMA_BULAN_EN = listOf(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+)
+
+/** Terjemahan tampilan kategori bawaan; nilai tersimpan tidak berubah. */
+val KATEGORI_EN = mapOf(
+    "Penjualan" to "Sales",
+    "Tambahan Modal" to "Capital Injection",
+    "Pembelian Obat/PBF" to "Medicine/Supplier Purchases",
+    "Operasional" to "Operations",
+    "Gaji Pegawai" to "Staff Salaries",
+    "Setoran Bank" to "Bank Deposit",
+    "Pengambilan Pemilik" to "Owner Withdrawal",
+    "Lainnya" to "Other"
+)
+
+fun bulanLabel(tahun: Int, bulan: Int, bahasa: BahasaApp = BahasaApp.ID): String {
+    val daftar = if (bahasa == BahasaApp.EN) NAMA_BULAN_EN else NAMA_BULAN
+    return "${daftar[(bulan - 1).coerceIn(0, 11)]} $tahun"
+}
 
 /** Saldo dua dompet: uang fisik di laci dan uang QRIS di rekening. */
 data class SaldoKas(val tunai: Long, val qris: Long) {
@@ -245,33 +264,36 @@ fun pendapatanPerHari(transaksi: List<TransaksiKas>, bulanId: Long): List<Pendap
     return perTanggal.map { (tanggal, total) -> PendapatanHari(tanggal, total) }
 }
 
-private fun labelSaluran(saluran: String): String = if (saluran == SALURAN_QRIS) "QRIS" else "Tunai"
+private fun labelSaluran(saluran: String, bahasa: BahasaApp = BahasaApp.ID): String =
+    if (saluran == SALURAN_QRIS) "QRIS" else if (bahasa == BahasaApp.EN) "Cash" else "Tunai"
 
 /** Teks rekap satu hari untuk dibagikan (WhatsApp dan lain-lain). */
-fun rekapHariText(namaApotek: String, tanggal: LocalDate, ringkasan: RingkasanHari, saldoAkhir: SaldoKas): String {
+fun rekapHariText(namaApotek: String, tanggal: LocalDate, ringkasan: RingkasanHari, saldoAkhir: SaldoKas, bahasa: BahasaApp = BahasaApp.ID): String {
+    val en = bahasa == BahasaApp.EN
+    fun kat(k: String): String = if (en) (KATEGORI_EN[k] ?: k) else k
     val sb = StringBuilder()
-    sb.append("Rekap Kas Harian - ").append(formatTanggal(tanggal)).append('\n')
+    sb.append(if (en) "Daily Cash Recap - " else "Rekap Kas Harian - ").append(formatTanggal(tanggal, bahasa)).append('\n')
     if (namaApotek.isNotBlank()) sb.append(namaApotek).append('\n')
     sb.append('\n')
-    sb.append("Pemasukan: +").append(formatRupiah(ringkasan.totalMasuk)).append('\n')
+    sb.append(if (en) "Income: +" else "Pemasukan: +").append(formatRupiah(ringkasan.totalMasuk)).append('\n')
     for (r in ringkasan.rincianMasuk) {
-        sb.append("- ").append(r.kategori).append(" (").append(labelSaluran(r.saluran))
+        sb.append("- ").append(kat(r.kategori)).append(" (").append(labelSaluran(r.saluran, bahasa))
             .append("): ").append(formatRupiah(r.nominal)).append('\n')
     }
-    sb.append("Pengeluaran: ").append(formatRupiah(-ringkasan.totalKeluar)).append('\n')
+    sb.append(if (en) "Expenses: " else "Pengeluaran: ").append(formatRupiah(-ringkasan.totalKeluar)).append('\n')
     for (r in ringkasan.rincianKeluar) {
-        sb.append("- ").append(r.kategori).append(" (").append(labelSaluran(r.saluran))
+        sb.append("- ").append(kat(r.kategori)).append(" (").append(labelSaluran(r.saluran, bahasa))
             .append("): ").append(formatRupiah(r.nominal)).append('\n')
     }
-    for (tr in ringkasan.transfer) {
-        sb.append("Transfer ").append(labelSaluran(tr.dari)).append(" \u2192 ").append(labelSaluran(tr.ke))
-            .append(": ").append(formatRupiah(tr.nominal)).append('\n')
+    for (t in ringkasan.transfer) {
+        sb.append("Transfer ").append(labelSaluran(t.dari, bahasa)).append(" \u2192 ").append(labelSaluran(t.ke, bahasa))
+            .append(": ").append(formatRupiah(t.nominal)).append('\n')
     }
     sb.append('\n')
-    sb.append("Saldo Akhir: ").append(formatRupiah(saldoAkhir.total))
-        .append(" (Tunai ").append(formatRupiah(saldoAkhir.tunai))
+    sb.append(if (en) "Closing Balance: " else "Saldo Akhir: ").append(formatRupiah(saldoAkhir.total))
+        .append(if (en) " (Cash " else " (Tunai ").append(formatRupiah(saldoAkhir.tunai))
         .append(" - QRIS ").append(formatRupiah(saldoAkhir.qris)).append(")\n")
-    sb.append("\nDibuat dengan KasBulanan")
+    sb.append(if (en) "\nMade with KasBulanan" else "\nDibuat dengan KasBulanan")
     return sb.toString()
 }
 
@@ -306,33 +328,45 @@ fun epochToLocalDate(epoch: Long): LocalDate =
 
 private val FORMAT_TANGGAL: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale("id", "ID"))
+private val FORMAT_TANGGAL_EN: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale.ENGLISH)
 private val FORMAT_JAM: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH.mm", Locale("id", "ID"))
 
-fun formatTanggal(epoch: Long): String =
-    Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(FORMAT_TANGGAL)
+private fun formatTanggalUntuk(bahasa: BahasaApp): DateTimeFormatter =
+    if (bahasa == BahasaApp.EN) FORMAT_TANGGAL_EN else FORMAT_TANGGAL
 
-fun formatTanggal(date: LocalDate): String = date.format(FORMAT_TANGGAL)
+fun formatTanggal(epoch: Long, bahasa: BahasaApp = BahasaApp.ID): String =
+    Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(formatTanggalUntuk(bahasa))
+
+fun formatTanggal(date: LocalDate, bahasa: BahasaApp = BahasaApp.ID): String =
+    date.format(formatTanggalUntuk(bahasa))
 
 fun formatJam(epoch: Long): String =
     Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(FORMAT_JAM)
 
 private val FORMAT_TANGGAL_WAKTU: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d MMM yyyy, HH.mm", Locale("id", "ID"))
+private val FORMAT_TANGGAL_WAKTU_EN: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d MMM yyyy, HH.mm", Locale.ENGLISH)
 
 /** Bentuk tanggal + jam: "9 Nov 2026, 21.10". */
-fun formatTanggalWaktu(epoch: Long): String =
-    Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).format(FORMAT_TANGGAL_WAKTU)
+fun formatTanggalWaktu(epoch: Long, bahasa: BahasaApp = BahasaApp.ID): String =
+    Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault())
+        .format(if (bahasa == BahasaApp.EN) FORMAT_TANGGAL_WAKTU_EN else FORMAT_TANGGAL_WAKTU)
 
 private val FORMAT_TANGGAL_SINGKAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE, d MMM", Locale("id", "ID"))
+private val FORMAT_TANGGAL_SINGKAT_EN: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE, d MMM", Locale.ENGLISH)
 
 /** Bentuk pendek tanggal: "Sen, 9 Nov". */
-fun formatTanggalSingkat(date: LocalDate): String = date.format(FORMAT_TANGGAL_SINGKAT)
+fun formatTanggalSingkat(date: LocalDate, bahasa: BahasaApp = BahasaApp.ID): String =
+    date.format(if (bahasa == BahasaApp.EN) FORMAT_TANGGAL_SINGKAT_EN else FORMAT_TANGGAL_SINGKAT)
 
 /** Label kepala kelompok riwayat: "Hari ini - ...", "Kemarin - ...", atau tanggal. */
-fun labelHari(date: LocalDate, hariIni: LocalDate): String = when (date) {
-    hariIni -> "Hari ini - " + formatTanggal(date)
-    hariIni.minusDays(1) -> "Kemarin - " + formatTanggal(date)
-    else -> formatTanggal(date)
+fun labelHari(date: LocalDate, hariIni: LocalDate, bahasa: BahasaApp = BahasaApp.ID): String = when (date) {
+    hariIni -> (if (bahasa == BahasaApp.EN) "Today - " else "Hari ini - ") + formatTanggal(date, bahasa)
+    hariIni.minusDays(1) -> (if (bahasa == BahasaApp.EN) "Yesterday - " else "Kemarin - ") + formatTanggal(date, bahasa)
+    else -> formatTanggal(date, bahasa)
 }
