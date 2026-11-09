@@ -200,6 +200,7 @@ fun KasBulananApp(
     var onlineSibuk by remember { mutableStateOf(false) }
     var pesanOnline by remember { mutableStateOf<String?>(null) }
     val googleSiap = remember { onlineSiap && FirebaseKit.googleSiap(context) }
+    var lewatiLogin by remember { mutableStateOf(false) }
     var statusSync by remember {
         mutableStateOf(
             when {
@@ -231,6 +232,66 @@ fun KasBulananApp(
                 }
                 HasilSync.BelumMasuk -> pesanOnline = "Belum masuk"
                 HasilSync.BelumDikonfigurasi -> pesanOnline = "Firebase belum dikonfigurasi"
+            }
+            onlineSibuk = false
+        }
+    }
+
+    // Handler masuk/daftar dipakai gerbang login dan layar Mode Online.
+    fun aksiMasuk(email: String, sandi: String) {
+        onlineSibuk = true
+        scope.launch {
+            try {
+                emailOnline = FirebaseKit.masukDenganEmail(email.trim(), sandi)
+                pesanOnline = "Berhasil masuk"
+                onlineSibuk = false
+                jalankanSync()
+            } catch (e: Exception) {
+                pesanOnline = "Gagal masuk: " + (e.message ?: "periksa email dan kata sandi")
+                onlineSibuk = false
+            }
+        }
+    }
+
+    fun aksiDaftar(email: String, sandi: String) {
+        onlineSibuk = true
+        scope.launch {
+            try {
+                emailOnline = FirebaseKit.daftarDenganEmail(email.trim(), sandi)
+                pesanOnline = "Akun dibuat dan sudah masuk"
+                onlineSibuk = false
+                jalankanSync()
+            } catch (e: Exception) {
+                pesanOnline = "Gagal daftar: " + (e.message ?: "coba lagi")
+                onlineSibuk = false
+            }
+        }
+    }
+
+    fun aksiMasukGoogle() {
+        onlineSibuk = true
+        scope.launch {
+            try {
+                emailOnline = FirebaseKit.masukDenganGoogle(context)
+                pesanOnline = "Berhasil masuk dengan Google"
+                statusSync = StatusSync.PROSES
+                onlineSibuk = false
+                jalankanSync()
+            } catch (e: Exception) {
+                pesanOnline = "Gagal masuk dengan Google: " + (e.message ?: "dibatalkan")
+                onlineSibuk = false
+            }
+        }
+    }
+
+    fun aksiResetSandi(email: String) {
+        onlineSibuk = true
+        scope.launch {
+            try {
+                FirebaseKit.kirimResetSandi(email.trim())
+                pesanOnline = "Email reset kata sandi terkirim ke " + email.trim()
+            } catch (e: Exception) {
+                pesanOnline = "Gagal mengirim reset: " + (e.message ?: "periksa alamat email")
             }
             onlineSibuk = false
         }
@@ -342,6 +403,21 @@ fun KasBulananApp(
     BackHandler(enabled = showOnline) { showOnline = false }
     BackHandler(enabled = showForm) { showForm = false }
 
+    // Gerbang login (G2): hanya saat Firebase terkonfigurasi, belum
+    // ada yang masuk, dan tamu belum memilih Lewati pada sesi ini.
+    val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
+    if (perluLogin) {
+        LayarLogin(
+            sibuk = onlineSibuk,
+            pesanStatus = pesanOnline,
+            googleSiap = googleSiap,
+            onMasuk = { email, sandi -> aksiMasuk(email, sandi) },
+            onDaftar = { email, sandi -> aksiDaftar(email, sandi) },
+            onMasukGoogle = { aksiMasukGoogle() },
+            onResetSandi = { aksiResetSandi(it) },
+            onLewati = { lewatiLogin = true }
+        )
+    } else {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -482,64 +558,10 @@ fun KasBulananApp(
                     sibuk = onlineSibuk,
                     pesanStatus = pesanOnline,
                     googleSiap = googleSiap,
-                    onMasukGoogle = {
-                        onlineSibuk = true
-                        scope.launch {
-                            try {
-                                emailOnline = FirebaseKit.masukDenganGoogle(context)
-                                pesanOnline = "Berhasil masuk dengan Google"
-                                statusSync = StatusSync.PROSES
-                                onlineSibuk = false
-                                jalankanSync()
-                            } catch (e: Exception) {
-                                pesanOnline = "Gagal masuk dengan Google: " +
-                                    (e.message ?: "dibatalkan")
-                                onlineSibuk = false
-                            }
-                        }
-                    },
-                    onResetSandi = { email ->
-                        onlineSibuk = true
-                        scope.launch {
-                            try {
-                                FirebaseKit.kirimResetSandi(email.trim())
-                                pesanOnline = "Email reset kata sandi terkirim ke " +
-                                    email.trim()
-                            } catch (e: Exception) {
-                                pesanOnline = "Gagal mengirim reset: " +
-                                    (e.message ?: "periksa alamat email")
-                            }
-                            onlineSibuk = false
-                        }
-                    },
-                    onMasuk = { email, sandi ->
-                        onlineSibuk = true
-                        scope.launch {
-                            try {
-                                emailOnline = FirebaseKit.masukDenganEmail(email.trim(), sandi)
-                                pesanOnline = "Berhasil masuk"
-                                onlineSibuk = false
-                                jalankanSync()
-                            } catch (e: Exception) {
-                                pesanOnline = "Gagal masuk: " + (e.message ?: "periksa email dan kata sandi")
-                                onlineSibuk = false
-                            }
-                        }
-                    },
-                    onDaftar = { email, sandi ->
-                        onlineSibuk = true
-                        scope.launch {
-                            try {
-                                emailOnline = FirebaseKit.daftarDenganEmail(email.trim(), sandi)
-                                pesanOnline = "Akun dibuat dan sudah masuk"
-                                onlineSibuk = false
-                                jalankanSync()
-                            } catch (e: Exception) {
-                                pesanOnline = "Gagal daftar: " + (e.message ?: "coba lagi")
-                                onlineSibuk = false
-                            }
-                        }
-                    },
+                    onMasukGoogle = { aksiMasukGoogle() },
+                    onResetSandi = { aksiResetSandi(it) },
+                    onMasuk = { email, sandi -> aksiMasuk(email, sandi) },
+                    onDaftar = { email, sandi -> aksiDaftar(email, sandi) },
                     onKeluar = {
                         FirebaseKit.keluar()
                         emailOnline = null
@@ -573,6 +595,7 @@ fun KasBulananApp(
         }
     }
 
+    }
     if (showTransfer && bulanBerjalan != null) {
         TransferDialog(
             bulan = bulanBerjalan,
