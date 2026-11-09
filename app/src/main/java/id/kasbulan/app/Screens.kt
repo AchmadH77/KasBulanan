@@ -1674,115 +1674,138 @@ fun LayarLogin(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(56.dp))
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(76.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(38.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "KasBulanan",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                "Masuk untuk menyinkronkan buku kasmu",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(24.dp))
-            if (googleSiap) {
-                Button(
-                    onClick = onMasukGoogle,
-                    enabled = !sibuk,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color(0xFF1F1F1F)
+            Spacer(Modifier.height(48.dp))
+            // L1 Kartu Tengah dengan tata letak L4 (Google di urutan utama):
+            // semua isi di dalam satu kartu, ikon dompet menumpang di tepi
+            // atas kartu.
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 38.dp)
                 ) {
-                    LogoGoogle(modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Masuk dengan Google")
+                    Column(
+                        modifier = Modifier.padding(
+                            start = 20.dp, end = 20.dp, top = 52.dp, bottom = 24.dp
+                        ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "KasBulanan",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            "Masuk untuk menyinkronkan buku kasmu",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        if (googleSiap) {
+                            Button(
+                                onClick = onMasukGoogle,
+                                enabled = !sibuk,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White,
+                                    contentColor = Color(0xFF1F1F1F)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                LogoGoogle(modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Masuk dengan Google")
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                HorizontalDivider(modifier = Modifier.weight(1f))
+                                Text(
+                                    "  atau pakai email  ",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                HorizontalDivider(modifier = Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(16.dp))
+                        }
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = kataSandi,
+                            onValueChange = { kataSandi = it },
+                            label = { Text("Kata sandi (min. 6 karakter)") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = { onMasuk(email, kataSandi) },
+                            enabled = !sibuk && masukanSah,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(if (sibuk) "Memproses..." else "Masuk") }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { onDaftar(email, kataSandi) },
+                            enabled = !sibuk && masukanSah,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Daftar Akun Baru") }
+                        TextButton(
+                            onClick = { onResetSandi(email) },
+                            enabled = !sibuk && email.contains("@")
+                        ) { Text("Lupa kata sandi?") }
+                        if (pesanStatus != null) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                pesanStatus,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = onLewati, enabled = !sibuk) {
+                            Text("Lewati - Pakai Tanpa Akun")
+                        }
+                        Text(
+                            "Mode tamu: data hanya di HP ini, tanpa sinkronisasi.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                    Text(
-                        "  atau pakai email  ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    HorizontalDivider(modifier = Modifier.weight(1f))
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier
+                        .size(76.dp)
+                        .align(Alignment.TopCenter)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(38.dp)
+                        )
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
             }
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = kataSandi,
-                onValueChange = { kataSandi = it },
-                label = { Text("Kata sandi (min. 6 karakter)") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { onMasuk(email, kataSandi) },
-                enabled = !sibuk && masukanSah,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text(if (sibuk) "Memproses..." else "Masuk") }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = { onDaftar(email, kataSandi) },
-                enabled = !sibuk && masukanSah,
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Daftar Akun Baru") }
-            TextButton(
-                onClick = { onResetSandi(email) },
-                enabled = !sibuk && email.contains("@")
-            ) { Text("Lupa kata sandi?") }
-            if (pesanStatus != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    pesanStatus,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.height(20.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(12.dp))
-            TextButton(onClick = onLewati, enabled = !sibuk) {
-                Text("Lewati - Pakai Tanpa Akun")
-            }
-            Text(
-                "Mode tamu: data hanya di HP ini, tanpa sinkronisasi.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Spacer(Modifier.height(32.dp))
         }
     }
