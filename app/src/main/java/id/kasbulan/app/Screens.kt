@@ -2,6 +2,7 @@ package id.kasbulan.app
 
 import android.content.Intent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -76,6 +77,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -323,55 +325,81 @@ fun TransaksiRow(
 }
 
 @Composable
-fun PitaHeader(namaApotek: String, bulan: BulanKas?) {
+fun PitaHeader(bulan: BulanKas?) {
     val bulanTeks = bulan?.let { bulanLabel(it.tahun, it.bulan, LocalBahasa.current) }
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+        Box(
+            modifier = Modifier.background(
+                Brush.horizontalGradient(
+                    listOf(MaterialTheme.colorScheme.primaryContainer, Color(0xFF174280))
+                )
+            )
         ) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
-                Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                // Ikon L6 mini, digambar sama seperti di Tentang.
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF0A3A24), Color(0xFF0E7A46))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
                         "K",
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = Color(0xFF5ED4A0),
                         fontWeight = FontWeight.ExtraBold,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.headlineSmall
                     )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(3.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFD4AF37))
+                    ) {
+                        Text(
+                            "Rp",
+                            color = Color(0xFF1E1804),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                        )
+                    }
                 }
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
+                Spacer(Modifier.width(12.dp))
                 Text(
                     "KasBulanan",
                     color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f)
                 )
-                Text(
-                    if (namaApotek.isNotBlank()) namaApotek else tr("Nama usaha belum diatur", "Business name not set"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            if (bulanTeks != null) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f)
-                ) {
-                    Text(
-                        bulanTeks,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
+                if (bulanTeks != null) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = Color.White.copy(alpha = 0.16f)
+                    ) {
+                        Text(
+                            bulanTeks,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
                 }
             }
         }
@@ -434,7 +462,7 @@ fun BerandaTab(
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        PitaHeader(namaApotek, bulan ?: bulanTerakhir)
+        PitaHeader(bulan ?: bulanTerakhir)
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -917,7 +945,7 @@ fun RiwayatTab(
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
         ?: bulanList.lastOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
-        PitaHeader(namaApotek, selected)
+        PitaHeader(selected)
         if (selected == null) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
@@ -991,7 +1019,7 @@ fun LaporanTab(
         ?: bulanList.firstOrNull { it.status == STATUS_BERJALAN }
         ?: bulanList.lastOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
-        PitaHeader(namaApotek, selected)
+        PitaHeader(selected)
         if (selected == null) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
