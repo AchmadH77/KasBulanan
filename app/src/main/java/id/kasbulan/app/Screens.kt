@@ -119,14 +119,56 @@ fun subTransaksi(t: TransaksiKas): String {
 @Composable
 fun MoneyField(label: String, rawDigits: String, onRawChange: (String) -> Unit) {
     OutlinedTextField(
-        value = groupThousands(rawDigits),
-        onValueChange = { onRawChange(it.filter { c -> c.isDigit() }.take(15)) },
+        value = rawDigits,
+        onValueChange = { onRawChange(bersihkanDigit(it)) },
         label = { Text(label) },
         prefix = { Text("Rp ") },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        visualTransformation = PemisahRibuanVisual(),
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+/** Normalkan input nominal: digit saja, tanpa nol di depan (satu "0" bila semua nol). */
+private fun bersihkanDigit(teks: String): String {
+    val digit = teks.filter { it.isDigit() }.take(15)
+    val tanpaNol = digit.trimStart('0')
+    return when {
+        digit.isEmpty() -> ""
+        tanpaNol.isEmpty() -> "0"
+        else -> tanpaNol
+    }
+}
+
+/**
+ * Pemisah ribuan sebagai transformasi visual: nilai kolom tetap digit mentah,
+ * titik hanya digambar. Kursor pun selalu menempel di ujung angka yang benar -
+ * cara lama (nilai kolom = teks bergrup) membuat kursor meleset ke tengah
+ * angka setiap kali grup berubah ("5.000.0|00").
+ */
+private class PemisahRibuanVisual : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val mentah = text.text
+        val tampil = groupThousands(mentah)
+        val pemetaan = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                val n = mentah.length
+                val batas = offset.coerceIn(0, n)
+                var ekstra = 0
+                for (i in 1 until batas) {
+                    if ((n - i) % 3 == 0) ekstra++
+                }
+                return batas + ekstra
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                val batas = offset.coerceIn(0, tampil.length)
+                return tampil.take(batas).count { it != '.' }
+            }
+        }
+        return TransformedText(AnnotatedString(tampil), pemetaan)
+    }
 }
 
 @Composable
