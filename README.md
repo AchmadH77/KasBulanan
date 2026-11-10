@@ -53,6 +53,11 @@ connection.
 - Interface in Indonesian or English, switchable in the More tab. Only
   the display changes: stored values (category names, the Excel template)
   stay Indonesian.
+- Midnight-blue Material 3 Expressive interface: a navy-gradient name
+  header (app name and current month only - no business name, so the
+  app looks the same for any kind of user), a floating pill bottom bar,
+  animated tab transitions and amount count-ups, and newly added rows
+  that slide in with a brief highlight.
 - Database safety net: an automatic copy of the database file right before
   an updated app is opened for the first time (max. 3 copies), on top of the
   manual backup.
