@@ -172,6 +172,16 @@ fun KasBulananApp(
     }
 
     var showForm by remember { mutableStateOf(false) }
+    var idSorot by remember { mutableStateOf<Long?>(null) }
+    var idSebelumSimpan by remember { mutableStateOf<Set<Long>?>(null) }
+    LaunchedEffect(transaksiList) {
+        val sebelum = idSebelumSimpan
+        if (sebelum != null) {
+            val baru = transaksiList.map { it.id }.filter { it !in sebelum }.maxOrNull()
+            if (baru != null) idSorot = baru
+            idSebelumSimpan = null
+        }
+    }
     var formInitial by remember { mutableStateOf<TransaksiKas?>(null) }
     var showTransfer by remember { mutableStateOf(false) }
     var transferInitial by remember { mutableStateOf<TransaksiKas?>(null) }
@@ -512,6 +522,7 @@ fun KasBulananApp(
                     transaksi = transaksiList,
                     namaApotek = namaApotek,
                     statusSync = statusSync,
+                    idSorot = idSorot,
                     onBukaOnline = {
                         when {
                             emailOnline != null -> { syncManual = true; jalankanSync() }
@@ -543,7 +554,7 @@ fun KasBulananApp(
                     onRekapHariIni = { showRekapHariIni = true },
                     onTransaksiClick = { bukaForm(it) }
                 )
-                1 -> RiwayatTab(bulanList, transaksiList, namaApotek) { bukaForm(it) }
+                1 -> RiwayatTab(bulanList, transaksiList, namaApotek, idSorot) { bukaForm(it) }
                 2 -> LaporanTab(bulanList, transaksiList, namaApotek) { tutupTarget = it }
                 else -> LainnyaTab(
                     namaApotek = namaApotek,
@@ -595,12 +606,14 @@ fun KasBulananApp(
                     initial = formInitial,
                     onBack = { showForm = false },
                     onSave = { t ->
+                        if (t.id == 0L) idSebelumSimpan = transaksiList.map { it.id }.toSet()
                         scope.launch {
                             if (t.id == 0L) repository.insertTransaksi(t) else repository.updateTransaksi(t)
                         }
                         showForm = false
                     },
                     onSaveAndAgain = { t ->
+                        if (t.id == 0L) idSebelumSimpan = transaksiList.map { it.id }.toSet()
                         scope.launch { repository.insertTransaksi(t) }
                     },
                     onDelete = { t ->
