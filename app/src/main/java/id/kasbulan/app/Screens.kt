@@ -77,6 +77,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
@@ -233,11 +234,30 @@ fun warnaHijauMasuk(): Color =
     }
 
 @Composable
-fun TransaksiRow(t: TransaksiKas, clickable: Boolean, onClick: () -> Unit) {
+fun TransaksiRow(
+    t: TransaksiKas,
+    clickable: Boolean,
+    tersorot: Boolean = false,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    // Sorotan baris baru: menyala sesaat lalu memudar habis (sekali jalan).
+    val sorot = remember(t.id) { Animatable(0f) }
+    LaunchedEffect(tersorot) {
+        if (tersorot) {
+            sorot.snapTo(1f)
+            sorot.animateTo(0f, animationSpec = tween(durationMillis = 1600, easing = FastOutSlowInEasing))
+        }
+    }
+    val warnaKartu = lerp(
+        MaterialTheme.colorScheme.surfaceContainer,
+        MaterialTheme.colorScheme.primaryContainer,
+        sorot.value * 0.65f
+    )
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = warnaKartu),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(if (clickable) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
@@ -405,6 +425,7 @@ fun BerandaTab(
     transaksi: List<TransaksiKas>,
     namaApotek: String,
     statusSync: StatusSync,
+    idSorot: Long? = null,
     onBukaOnline: () -> Unit,
     onMulaiBulanIni: () -> Unit,
     onBukaBulanBerikutnya: () -> Unit,
@@ -672,7 +693,7 @@ fun BerandaTab(
                 }
             } else {
                 items(terakhir, key = { it.id }) { t ->
-                    TransaksiRow(t, clickable = true) { onTransaksiClick(t) }
+                    TransaksiRow(t, clickable = true, tersorot = t.id == idSorot, modifier = Modifier.animateItem()) { onTransaksiClick(t) }
                 }
             }
         }
@@ -888,6 +909,7 @@ fun RiwayatTab(
     bulanList: List<BulanKas>,
     transaksi: List<TransaksiKas>,
     namaApotek: String,
+    idSorot: Long? = null,
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
     var selectedId by remember { mutableStateOf<Long?>(null) }
@@ -947,7 +969,7 @@ fun RiwayatTab(
                 }
             }
             items(daftar, key = { it.id }) { t ->
-                TransaksiRow(t, clickable = selected.status == STATUS_BERJALAN) { onTransaksiClick(t) }
+                TransaksiRow(t, clickable = selected.status == STATUS_BERJALAN, tersorot = t.id == idSorot, modifier = Modifier.animateItem()) { onTransaksiClick(t) }
             }
         }
         item { Spacer(Modifier.height(72.dp)) }            }
