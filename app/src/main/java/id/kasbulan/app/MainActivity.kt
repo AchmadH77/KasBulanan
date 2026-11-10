@@ -201,6 +201,7 @@ fun KasBulananApp(
 
     // ---- Mode Online (lapisan opsional, docs/ONLINE.md) ----
     var showInfoOnline by remember { mutableStateOf(false) }
+    var showKonfirmasiKeluar by remember { mutableStateOf(false) }
     var syncManual by remember { mutableStateOf(false) }
     val onlineSiap = remember { FirebaseKit.siap(context) }
     var emailOnline by remember {
@@ -582,12 +583,7 @@ fun KasBulananApp(
                     emailAkun = emailOnline,
                     onlineSiap = onlineSiap,
                     syncTerakhir = syncTerakhir,
-                    onKeluarAkun = {
-                        FirebaseKit.keluar()
-                        emailOnline = null
-                        statusSync = StatusSync.BELUM_MASUK
-                        pesan = teks(bahasa, "Sudah keluar - data di HP ini tidak berubah", "Signed out - the data on this phone is unchanged")
-                    },
+                    onKeluarAkun = { showKonfirmasiKeluar = true },
                     bahasa = bahasa,
                     onGantiBahasa = onBahasaChange
                 )
@@ -649,6 +645,34 @@ fun KasBulananApp(
     }
     if (showTentang) {
         TentangDialog(onDismiss = { showTentang = false })
+    }
+    if (showKonfirmasiKeluar) {
+        AlertDialog(
+            onDismissRequest = { showKonfirmasiKeluar = false },
+            title = { Text(tr("Keluar Akun?", "Sign Out?")) },
+            text = {
+                Text(
+                    tr(
+                        "Data di HP ini tidak berubah dan tidak terhapus. Sinkronisasi berhenti sampai kamu masuk lagi.",
+                        "The data on this phone will not change or be deleted. Sync stops until you sign in again."
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showKonfirmasiKeluar = false
+                        FirebaseKit.keluar()
+                        emailOnline = null
+                        statusSync = StatusSync.BELUM_MASUK
+                        pesan = teks(bahasa, "Sudah keluar - data di HP ini tidak berubah", "Signed out - the data on this phone is unchanged")
+                    }
+                ) { Text(tr("Keluar", "Sign Out"), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showKonfirmasiKeluar = false }) { Text(tr("Batal", "Cancel")) }
+            }
+        )
     }
     if (showInfoOnline) {
         AlertDialog(
