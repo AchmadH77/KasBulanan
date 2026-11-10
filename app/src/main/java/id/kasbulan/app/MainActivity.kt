@@ -1182,7 +1182,7 @@ fun TentangDialog(onDismiss: () -> Unit) {
                 ) {
                     Column(
                         modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
@@ -1223,8 +1223,8 @@ fun TentangDialog(onDismiss: () -> Unit) {
                                 Text(
                                     "KasBulanan",
                                     color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
                                     tr("Buku Kas Bulanan", "Monthly Cash Book"),
@@ -1233,25 +1233,16 @@ fun TentangDialog(onDismiss: () -> Unit) {
                                 )
                             }
                         }
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                tr("VERSI 1.0.0", "VERSION 1.0.0"),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                tr("SEJAK 2026", "SINCE 2026"),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Text(
+                            tr("VERSI 1.0.0 - SEJAK 2026", "VERSION 1.0.0 - SINCE 2026"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
                 Text(tr("Buku kas bulanan untuk usaha dan pemakaian sehari-hari, dengan pemisahan uang Tunai dan QRIS, siklus tutup buku bulanan, backup JSON, dan ekspor Excel.", "A monthly cash book for businesses and everyday use, with Cash and QRIS kept separate, a monthly book-closing cycle, JSON backup, and Excel export."))
-                Text(tr("Semua data tersimpan di HP ini, tanpa akun dan tanpa server.", "All data is stored on this phone, with no account and no server."))
+                Text(tr("Data tersimpan di HP ini. Bila kamu masuk, salinan tersinkron ke akunmu sebagai cadangan.", "Data is stored on this phone. When you sign in, a copy syncs to your account as a backup."))
                 HorizontalDivider()
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Text(tr("Pengembang", "Developer"), color = MaterialTheme.colorScheme.onSurfaceVariant)
