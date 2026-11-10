@@ -451,7 +451,6 @@ fun BerandaTab(
     bulanTerakhir: BulanKas?,
     labelBulanBerikutnya: String?,
     transaksi: List<TransaksiKas>,
-    namaApotek: String,
     statusSync: StatusSync,
     idSorot: Long? = null,
     onBukaOnline: () -> Unit,
@@ -736,7 +735,6 @@ fun BerandaTab(
 fun RekapHariIniScreen(
     bulan: BulanKas,
     transaksi: List<TransaksiKas>,
-    namaApotek: String,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -891,7 +889,7 @@ fun RekapHariIniScreen(
             val judulBagikan = tr("Bagikan Rekap", "Share Recap")
             Button(
                 onClick = {
-                    val teks = rekapHariText(namaApotek, hariIni, ringkasan, saldoAkhir, bahasaAktif)
+                    val teks = rekapHariText("", hariIni, ringkasan, saldoAkhir, bahasaAktif)
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, teks)
@@ -936,7 +934,6 @@ fun RekapHariIniScreen(
 fun RiwayatTab(
     bulanList: List<BulanKas>,
     transaksi: List<TransaksiKas>,
-    namaApotek: String,
     idSorot: Long? = null,
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
@@ -1011,7 +1008,6 @@ fun RiwayatTab(
 fun LaporanTab(
     bulanList: List<BulanKas>,
     transaksi: List<TransaksiKas>,
-    namaApotek: String,
     onTutupBuku: (BulanKas) -> Unit
 ) {
     var selectedId by remember { mutableStateOf<Long?>(null) }
@@ -1292,8 +1288,6 @@ fun LaporanTab(
 
 @Composable
 fun LainnyaTab(
-    namaApotek: String,
-    onNamaApotekChange: (String) -> Unit,
     dark: Boolean,
     onToggleDark: (Boolean) -> Unit,
     lastBackupAt: Long,
@@ -1312,8 +1306,6 @@ fun LainnyaTab(
     bahasa: BahasaApp,
     onGantiBahasa: () -> Unit
 ) {
-    var editNama by remember { mutableStateOf(false) }
-    var namaDraft by remember { mutableStateOf("") }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Spacer(Modifier.height(28.dp)) }
         item {
@@ -1333,11 +1325,6 @@ fun LainnyaTab(
                 }
                 Spacer(Modifier.height(12.dp))
                 Text("KasBulanan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                Text(
-                    if (namaApotek.isNotBlank()) namaApotek else tr("Nama usaha belum diatur", "Business name not set"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 Spacer(Modifier.height(8.dp))
                 Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainer) {
                     Text(
@@ -1420,24 +1407,6 @@ fun LainnyaTab(
                 modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
             ) {
                 Column {
-                    LainnyaMenuRow(
-                        icon = Icons.Default.Store,
-                        tint = Color(0xFF6FA8DC),
-                        title = tr("Nama Usaha", "Business Name"),
-                        subtitle = if (namaApotek.isNotBlank()) namaApotek else tr("Ketuk untuk mengisi - tampil di laporan", "Tap to fill in - shown on reports"),
-                        onClick = {
-                            namaDraft = namaApotek
-                            editNama = true
-                        },
-                        trailing = {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp, end = 16.dp))
                     LainnyaMenuRow(
                         icon = if (dark) Icons.Default.DarkMode else Icons.Default.LightMode,
                         tint = Color(0xFFE3B341),
@@ -1570,30 +1539,6 @@ fun LainnyaTab(
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
-    }
-    if (editNama) {
-        AlertDialog(
-            onDismissRequest = { editNama = false },
-            title = { Text(tr("Nama Usaha", "Business Name")) },
-            text = {
-                OutlinedTextField(
-                    value = namaDraft,
-                    onValueChange = { namaDraft = it },
-                    label = { Text(tr("Nama usaha", "Business name")) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onNamaApotekChange(namaDraft.trim())
-                    editNama = false
-                }) { Text(tr("Simpan", "Save")) }
-            },
-            dismissButton = {
-                TextButton(onClick = { editNama = false }) { Text(tr("Batal", "Cancel")) }
-            }
-        )
     }
 }
 
