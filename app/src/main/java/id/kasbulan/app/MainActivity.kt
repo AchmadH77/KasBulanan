@@ -116,7 +116,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs = remember { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
             var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
-            var namaApotek by remember { mutableStateOf(prefs.getString("nama_apotek", "") ?: "") }
             var bahasa by remember {
                 mutableStateOf(if (prefs.getString("bahasa", "id") == "en") BahasaApp.EN else BahasaApp.ID)
             }
@@ -127,11 +126,6 @@ class MainActivity : ComponentActivity() {
                     onToggleDark = { nilai ->
                         dark = nilai
                         prefs.edit().putBoolean("dark_theme", nilai).apply()
-                    },
-                    namaApotek = namaApotek,
-                    onNamaApotekChange = { nilai ->
-                        namaApotek = nilai
-                        prefs.edit().putString("nama_apotek", nilai).apply()
                     },
                     bahasa = bahasa,
                     onBahasaChange = {
@@ -153,8 +147,6 @@ fun KasBulananApp(
     repository: KasRepository,
     dark: Boolean,
     onToggleDark: (Boolean) -> Unit,
-    namaApotek: String,
-    onNamaApotekChange: (String) -> Unit,
     bahasa: BahasaApp,
     onBahasaChange: () -> Unit
 ) {
@@ -512,7 +504,6 @@ fun KasBulananApp(
                     RekapHariIniScreen(
                         bulan = bulanBerjalan,
                         transaksi = transaksiList,
-                        namaApotek = namaApotek,
                         onBack = { showRekapHariIni = false }
                     )
                 } else BerandaTab(
@@ -520,7 +511,6 @@ fun KasBulananApp(
                     bulanTerakhir = bulanTerakhir,
                     labelBulanBerikutnya = labelBerikutnya,
                     transaksi = transaksiList,
-                    namaApotek = namaApotek,
                     statusSync = statusSync,
                     idSorot = idSorot,
                     onBukaOnline = {
@@ -554,10 +544,9 @@ fun KasBulananApp(
                     onRekapHariIni = { showRekapHariIni = true },
                     onTransaksiClick = { bukaForm(it) }
                 )
-                1 -> RiwayatTab(bulanList, transaksiList, namaApotek, idSorot) { bukaForm(it) }
-                2 -> LaporanTab(bulanList, transaksiList, namaApotek) { tutupTarget = it }
+                1 -> RiwayatTab(bulanList, transaksiList, idSorot) { bukaForm(it) }
+                2 -> LaporanTab(bulanList, transaksiList) { tutupTarget = it }
                 else -> LainnyaTab(
-                    namaApotek = namaApotek,
                     onNamaApotekChange = onNamaApotekChange,
                     dark = dark,
                     onToggleDark = onToggleDark,
