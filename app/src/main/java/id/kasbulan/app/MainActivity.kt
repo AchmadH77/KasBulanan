@@ -547,7 +547,6 @@ fun KasBulananApp(
                 1 -> RiwayatTab(bulanList, transaksiList, idSorot) { bukaForm(it) }
                 2 -> LaporanTab(bulanList, transaksiList) { tutupTarget = it }
                 else -> LainnyaTab(
-                    onNamaApotekChange = onNamaApotekChange,
                     dark = dark,
                     onToggleDark = onToggleDark,
                     lastBackupAt = lastBackupAt,
