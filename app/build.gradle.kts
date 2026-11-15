@@ -92,7 +92,7 @@ dependencies {
 
     // Local database (Room) - all data stays on the phone, no server.
     // Excel export (.xlsx), same library as the pharmacy cashier app.
-    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("org.apache.poi:poi-ooxml:6.0.0")
 
     implementation("androidx.room:room-runtime:2.7.2")
     implementation("androidx.room:room-ktx:2.7.2")
