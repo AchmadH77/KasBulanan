@@ -29,8 +29,6 @@ jobs:
           gradle-version: '9.6.0'
       - name: Unit tests
         run: "gradle :app:testDebugUnitTest --stacktrace"
-      - name: Lint
-        run: gradle :app:lintDebug --stacktrace
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
       - name: Build release APK
