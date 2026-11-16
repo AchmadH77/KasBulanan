@@ -153,6 +153,29 @@ fun ringkasanBulan(transaksi: List<TransaksiKas>, bulanId: Long): RingkasanBulan
     return RingkasanBulan(masuk, keluar, perMasuk, perKeluar)
 }
 
+/** Ringkasan masuk/keluar per dompet dalam satu bulan. Transfer TIDAK dihitung. */
+data class RingkasanDompet(
+    val masukTunai: Long,
+    val keluarTunai: Long,
+    val masukQris: Long,
+    val keluarQris: Long
+)
+
+fun ringkasanPerDompet(transaksi: List<TransaksiKas>, bulanId: Long): RingkasanDompet {
+    var masukTunai = 0L
+    var keluarTunai = 0L
+    var masukQris = 0L
+    var keluarQris = 0L
+    for (t in transaksi) {
+        if (t.bulanId != bulanId) continue
+        when (t.jenis) {
+            JENIS_MASUK -> if (t.saluran == SALURAN_QRIS) masukQris += t.nominal else masukTunai += t.nominal
+            JENIS_KELUAR -> if (t.saluran == SALURAN_QRIS) keluarQris += t.nominal else keluarTunai += t.nominal
+        }
+    }
+    return RingkasanDompet(masukTunai, keluarTunai, masukQris, keluarQris)
+}
+
 /** Teks laporan satu bulan untuk dibagikan (WhatsApp dan lain-lain). */
 fun laporanText(bulan: BulanKas, namaApotek: String, bulanList: List<BulanKas>, transaksi: List<TransaksiKas>): String {
     val saldoAwal = saldoAwalBulan(bulan, bulanList, transaksi)
