@@ -34,11 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.AlertDialog
@@ -46,7 +45,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -156,6 +154,7 @@ fun KasBulananApp(
     val context = LocalContext.current
     var tab by remember { mutableIntStateOf(0) }
     var showRekapHariIni by remember { mutableStateOf(false) }
+    var dompetDetail by remember { mutableStateOf<String?>(null) }
     val bulanBerjalan = bulanList.firstOrNull { it.status == STATUS_BERJALAN }
     val bulanTerakhir = bulanList.lastOrNull()
     val labelBerikutnya = bulanTerakhir?.let {
@@ -175,6 +174,7 @@ fun KasBulananApp(
         }
     }
     var formInitial by remember { mutableStateOf<TransaksiKas?>(null) }
+    var jenisTerkunci by remember { mutableStateOf<String?>(null) }
     var showTransfer by remember { mutableStateOf(false) }
     var transferInitial by remember { mutableStateOf<TransaksiKas?>(null) }
     var tutupTarget by remember { mutableStateOf<BulanKas?>(null) }
@@ -409,6 +409,7 @@ fun KasBulananApp(
     }
 
     fun bukaForm(t: TransaksiKas?) {
+        jenisTerkunci = null
         if (t?.jenis == JENIS_TRANSFER) {
             transferInitial = t
             showTransfer = true
@@ -420,6 +421,7 @@ fun KasBulananApp(
 
     BackHandler(enabled = showRekapHariIni) { showRekapHariIni = false }
     BackHandler(enabled = showForm) { showForm = false }
+    BackHandler(enabled = dompetDetail != null) { dompetDetail = null }
 
     CompositionLocalProvider(LocalBahasa provides bahasa) {
     // Gerbang login (G2): hanya saat Firebase terkonfigurasi, belum
@@ -459,31 +461,22 @@ fun KasBulananApp(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             ItemPillNav(Icons.Default.Home, tr("Beranda", "Home"), tab == 0) {
-                                showRekapHariIni = false; tab = 0
+                                showRekapHariIni = false; dompetDetail = null; tab = 0
                             }
-                            ItemPillNav(Icons.Default.History, tr("Riwayat", "History"), tab == 1) {
-                                showRekapHariIni = false; tab = 1
+                            ItemPillNav(Icons.AutoMirrored.Filled.ReceiptLong, tr("Mutasi", "Activity"), tab == 1) {
+                                showRekapHariIni = false; dompetDetail = null; tab = 1
                             }
                             ItemPillNav(Icons.Default.Assessment, tr("Laporan", "Report"), tab == 2) {
-                                showRekapHariIni = false; tab = 2
+                                showRekapHariIni = false; dompetDetail = null; tab = 2
                             }
                             ItemPillNav(Icons.Default.MoreHoriz, tr("Lainnya", "More"), tab == 3) {
-                                showRekapHariIni = false; tab = 3
+                                showRekapHariIni = false; dompetDetail = null; tab = 3
                             }
                         }
                     }
                 }
             }
         },
-        floatingActionButton = {
-            if (tab == 0 && bulanBerjalan != null && !showRekapHariIni && !showForm) {
-                ExtendedFloatingActionButton(
-                    onClick = { bukaForm(null) },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(tr("Catat", "Record")) }
-                )
-            }
-        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -500,7 +493,19 @@ fun KasBulananApp(
                 label = "pindahTab"
             ) { tabTampil ->
             when (tabTampil) {
-                0 -> if (showRekapHariIni && bulanBerjalan != null) {
+                0 -> if (dompetDetail != null && bulanBerjalan != null) {
+                    val saluranDompet = dompetDetail
+                    if (saluranDompet != null) {
+                        DompetDetailScreen(
+                            bulan = bulanBerjalan,
+                            saluran = saluranDompet,
+                            transaksi = transaksiList,
+                            idSorot = idSorot,
+                            onBack = { dompetDetail = null },
+                            onTransaksiClick = { bukaForm(it) }
+                        )
+                    }
+                } else if (showRekapHariIni && bulanBerjalan != null) {
                     RekapHariIniScreen(
                         bulan = bulanBerjalan,
                         transaksi = transaksiList,
@@ -541,6 +546,16 @@ fun KasBulananApp(
                         transferInitial = null
                         showTransfer = true
                     },
+                    onDompetClick = { dompetDetail = it },
+                    onTopUp = {
+                        bukaForm(null)
+                        jenisTerkunci = JENIS_MASUK
+                    },
+                    onBayar = {
+                        bukaForm(null)
+                        jenisTerkunci = JENIS_KELUAR
+                    },
+                    onMutasi = { tab = 1 },
                     onRekapHariIni = { showRekapHariIni = true },
                     onTransaksiClick = { bukaForm(it) }
                 )
@@ -592,6 +607,7 @@ fun KasBulananApp(
                 CatatTransaksiScreen(
                     bulan = bulanBerjalan,
                     initial = formInitial,
+                    jenisTerkunci = jenisTerkunci,
                     onBack = { showForm = false },
                     onSave = { t ->
                         if (t.id == 0L) idSebelumSimpan = transaksiList.map { it.id }.toSet()
@@ -767,12 +783,13 @@ private fun epochDariTanggal(tanggal: LocalDate, initial: TransaksiKas?): Long {
 fun CatatTransaksiScreen(
     bulan: BulanKas,
     initial: TransaksiKas?,
+    jenisTerkunci: String? = null,
     onBack: () -> Unit,
     onSave: (TransaksiKas) -> Unit,
     onSaveAndAgain: ((TransaksiKas) -> Unit)? = null,
     onDelete: (TransaksiKas) -> Unit
 ) {
-    var jenis by remember { mutableStateOf(initial?.jenis ?: JENIS_MASUK) }
+    var jenis by remember { mutableStateOf(initial?.jenis ?: jenisTerkunci ?: JENIS_MASUK) }
     var saluran by remember { mutableStateOf(initial?.saluran ?: SALURAN_TUNAI) }
     var kategori by remember { mutableStateOf(initial?.kategori ?: KATEGORI_MASUK.first()) }
     var nominalRaw by remember { mutableStateOf(initial?.nominal?.toString() ?: "") }
@@ -818,7 +835,12 @@ fun CatatTransaksiScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = tr("Kembali", "Back"))
             }
             Text(
-                if (initial == null) tr("Catat Transaksi", "Record Transaction") else tr("Ubah Transaksi", "Edit Transaction"),
+                when {
+                    initial != null -> tr("Ubah Transaksi", "Edit Transaction")
+                    jenisTerkunci == JENIS_MASUK -> tr("Top Up", "Top Up")
+                    jenisTerkunci == JENIS_KELUAR -> tr("Bayar", "Pay")
+                    else -> tr("Catat Transaksi", "Record Transaction")
+                },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -830,13 +852,15 @@ fun CatatTransaksiScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                listOf(JENIS_MASUK to tr("Masuk", "Income"), JENIS_KELUAR to tr("Keluar", "Expense")).forEachIndexed { i, (nilai, label) ->
-                    SegmentedButton(
-                        selected = jenis == nilai,
-                        onClick = { jenis = nilai },
-                        shape = SegmentedButtonDefaults.itemShape(index = i, count = 2)
-                    ) { Text(label) }
+            if (jenisTerkunci == null) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    listOf(JENIS_MASUK to tr("Masuk", "Income"), JENIS_KELUAR to tr("Keluar", "Expense")).forEachIndexed { i, (nilai, label) ->
+                        SegmentedButton(
+                            selected = jenis == nilai,
+                            onClick = { jenis = nilai },
+                            shape = SegmentedButtonDefaults.itemShape(index = i, count = 2)
+                        ) { Text(label) }
+                    }
                 }
             }
             Text(tr("Saluran Uang", "Money Channel"), style = MaterialTheme.typography.labelLarge)
