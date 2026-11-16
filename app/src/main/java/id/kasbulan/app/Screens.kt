@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -92,6 +94,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import id.kasbulan.app.data.BulanKas
 import id.kasbulan.app.data.TransaksiKas
@@ -458,6 +461,10 @@ fun BerandaTab(
     onBukaBulanBerikutnya: () -> Unit,
     onTransfer: () -> Unit,
     onRekapHariIni: () -> Unit,
+    onDompetClick: (String) -> Unit,
+    onTopUp: () -> Unit,
+    onBayar: () -> Unit,
+    onMutasi: () -> Unit,
     onTransaksiClick: (TransaksiKas) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -500,7 +507,7 @@ fun BerandaTab(
             }
         } else {
             val saldo = hitungSaldo(transaksi)
-            val ringkasan = ringkasanBulan(transaksi, bulan.id)
+            val ringkasanDompet = ringkasanPerDompet(transaksi, bulan.id)
             val terakhir = transaksi
                 .filter { it.bulanId == bulan.id }
                 .sortedByDescending { it.epoch }
@@ -529,7 +536,7 @@ fun BerandaTab(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                tr("Saldo Kas", "Cash Balance"),
+                                tr("Total Saldo", "Total Balance"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.weight(1f)
@@ -570,19 +577,6 @@ fun BerandaTab(
                             Color.White,
                             FontWeight.ExtraBold
                         )
-                        Spacer(Modifier.height(10.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.35f))
-                        Spacer(Modifier.height(10.dp))
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(tr("Tunai (laci)", "Cash (drawer)"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                TeksRupiahAnimasi(saldo.tunai, MaterialTheme.typography.titleSmall, Color.White, FontWeight.Bold)
-                            }
-                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text(tr("QRIS (rekening)", "QRIS (account)"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                TeksRupiahAnimasi(saldo.qris, MaterialTheme.typography.titleSmall, Color.White, FontWeight.Bold)
-                            }
-                        }
                     }
                 }
             }
@@ -590,47 +584,82 @@ fun BerandaTab(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).clickable { onDompetClick(SALURAN_TUNAI) }
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(tr("Masuk bulan ini", "Income this month"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TeksRupiahAnimasi(
-                                ringkasan.totalMasuk,
-                                MaterialTheme.typography.titleSmall,
-                                warnaHijauMasuk(),
-                                FontWeight.Bold,
-                                awalan = "+"
+                            Text(tr("Tunai (laci)", "Cash (drawer)"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TeksRupiahAnimasi(saldo.tunai, MaterialTheme.typography.titleSmall, MaterialTheme.colorScheme.onSurface, FontWeight.Bold)
+                            Text(
+                                tr("Masuk ", "In ") + formatRupiah(ringkasanDompet.masukTunai),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = warnaHijauMasuk(),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).clickable { onDompetClick(SALURAN_QRIS) }
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(tr("Keluar bulan ini", "Expenses this month"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TeksRupiahAnimasi(
-                                -ringkasan.totalKeluar,
-                                MaterialTheme.typography.titleSmall,
-                                MaterialTheme.colorScheme.error,
-                                FontWeight.Bold
+                            Text(tr("QRIS (rekening)", "QRIS (account)"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TeksRupiahAnimasi(saldo.qris, MaterialTheme.typography.titleSmall, MaterialTheme.colorScheme.onSurface, FontWeight.Bold)
+                            Text(
+                                tr("Masuk ", "In ") + formatRupiah(ringkasanDompet.masukQris),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = warnaHijauMasuk(),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
                 }
             }
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        tr("Saldo berjalan dari seluruh catatan", "Running balance from all records"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(onClick = onTransfer) {
-                        Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(tr("Transfer", "Transfer"))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onTopUp,
+                        colors = ButtonDefaults.buttonColors(containerColor = warnaHijauMasuk(), contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                        modifier = Modifier.weight(1f).height(56.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(tr("Top Up", "Top Up"), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        }
+                    }
+                    Button(
+                        onClick = onBayar,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                        modifier = Modifier.weight(1f).height(56.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(tr("Bayar", "Pay"), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = onTransfer,
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                        modifier = Modifier.weight(1f).height(56.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(tr("Transfer", "Transfer"), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        }
+                    }
+                    Button(
+                        onClick = onMutasi,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, contentColor = MaterialTheme.colorScheme.onSurface),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                        modifier = Modifier.weight(1f).height(56.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(tr("Mutasi", "Activity"), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -726,6 +755,93 @@ fun BerandaTab(
         }
         item { Spacer(Modifier.height(72.dp)) }
     }
+    }
+}
+
+@Composable
+fun DompetDetailScreen(
+    bulan: BulanKas,
+    saluran: String,
+    transaksi: List<TransaksiKas>,
+    idSorot: Long? = null,
+    onBack: () -> Unit,
+    onTransaksiClick: (TransaksiKas) -> Unit
+) {
+    val saldo = hitungSaldo(transaksi)
+    val saldoDompet = if (saluran == SALURAN_QRIS) saldo.qris else saldo.tunai
+    val ringkasan = ringkasanPerDompet(transaksi, bulan.id)
+    val masukDompet = if (saluran == SALURAN_QRIS) ringkasan.masukQris else ringkasan.masukTunai
+    val keluarDompet = if (saluran == SALURAN_QRIS) ringkasan.keluarQris else ringkasan.keluarTunai
+    val daftar = transaksi
+        .filter { it.bulanId == bulan.id && (it.saluran == saluran || it.saluranTujuan == saluran) }
+        .sortedByDescending { it.epoch }
+    Column(modifier = Modifier.fillMaxSize()) {
+        PitaHeader(bulan)
+        Row(modifier = Modifier.padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = tr("Kembali", "Back"))
+            }
+            Text(
+                if (saluran == SALURAN_QRIS) tr("Dompet QRIS", "QRIS Wallet") else tr("Dompet Tunai", "Cash Wallet"),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            tr("Saldo Dompet", "Wallet Balance"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        TeksRupiahAnimasi(
+                            saldoDompet,
+                            MaterialTheme.typography.headlineMedium,
+                            Color.White,
+                            FontWeight.ExtraBold
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.35f))
+                        Spacer(Modifier.height(10.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(tr("Masuk bulan ini", "Income this month"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Text("+" + formatRupiah(masukDompet), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                Text(tr("Keluar bulan ini", "Expenses this month"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Text(formatRupiah(-keluarDompet), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Text(tr("Transaksi Dompet", "Wallet Transactions"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            }
+            if (daftar.isEmpty()) {
+                item {
+                    Text(
+                        tr("Belum ada transaksi di dompet ini bulan ini.", "No transactions in this wallet this month yet."),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                items(daftar, key = { it.id }) { t ->
+                    TransaksiRow(t, clickable = true, tersorot = t.id == idSorot, modifier = Modifier.animateItem()) { onTransaksiClick(t) }
+                }
+            }
+            item { Spacer(Modifier.height(72.dp)) }
+        }
     }
 }
 
@@ -1030,6 +1146,7 @@ fun LaporanTab(
             val saldoAwal = saldoAwalBulan(selected, bulanList, transaksi)
             val saldo = saldoAkhirBulan(selected, bulanList, transaksi)
             val ringkasan = ringkasanBulan(transaksi, selected.id)
+            val ringkasanDompet = ringkasanPerDompet(transaksi, selected.id)
             val pendapatanHarian = pendapatanPerHari(transaksi, selected.id)
             val ditutup = selected.status == STATUS_DITUTUP
             LazyColumn(
@@ -1037,6 +1154,9 @@ fun LaporanTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
         item { Spacer(Modifier.height(8.dp)) }
+        item {
+            Text(tr("Laporan Bulanan", "Monthly Statement"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
         item { BulanSelector(bulanList, selected) { selectedId = it.id } }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
@@ -1111,6 +1231,35 @@ fun LaporanTab(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            Text(tr("Rincian per Dompet", "Breakdown by Wallet"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column {
+                        Text(tr("Tunai (laci)", "Cash (drawer)"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            tr("Masuk ", "In ") + formatRupiah(ringkasanDompet.masukTunai) + " \u00b7 " + tr("Keluar ", "Out ") + formatRupiah(ringkasanDompet.keluarTunai),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Column {
+                        Text("QRIS", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            tr("Masuk ", "In ") + formatRupiah(ringkasanDompet.masukQris) + " \u00b7 " + tr("Keluar ", "Out ") + formatRupiah(ringkasanDompet.keluarQris),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
