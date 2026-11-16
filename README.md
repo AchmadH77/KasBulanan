@@ -71,7 +71,7 @@ mode uses Firebase Authentication and Cloud Firestore (Firebase BOM
 33.5.1) behind a configuration check — without a `google-services.json`
 the online layer stays dormant and the app is purely offline. R8 is
 enabled for both debug and release builds. Requires Android 8.0 (API 26)
-or newer. 45 unit tests run as a CI step before the APK is built. The project follows the Kasir pattern:
+or newer. 48 unit tests run as a CI step before the APK is built. The project follows the Kasir pattern:
 builds run on GitHub Actions (`workflow_dispatch`), with no Gradle wrapper —
 Gradle 9.6.0 is provided by `gradle/actions/setup-gradle`.
 
