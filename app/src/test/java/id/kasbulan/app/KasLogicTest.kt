@@ -63,6 +63,38 @@ class KasLogicTest {
     }
 
     @Test
+    fun ringkasanPerDompetMenghitungPerSaluranTanpaTransfer() {
+        val ringkasan = ringkasanPerDompet(daftar, bulan.id)
+        assertEquals(300_000L, ringkasan.masukTunai)
+        assertEquals(250_000L, ringkasan.keluarTunai)
+        assertEquals(400_000L, ringkasan.masukQris)
+        assertEquals(0L, ringkasan.keluarQris)
+    }
+
+    @Test
+    fun ringkasanPerDompetDaftarKosongNolSemua() {
+        val ringkasan = ringkasanPerDompet(emptyList(), bulan.id)
+        assertEquals(0L, ringkasan.masukTunai)
+        assertEquals(0L, ringkasan.keluarTunai)
+        assertEquals(0L, ringkasan.masukQris)
+        assertEquals(0L, ringkasan.keluarQris)
+    }
+
+    @Test
+    fun ringkasanPerDompetKeluarQrisDanBulanLainDiabaikan() {
+        val daftar = listOf(
+            transaksi(JENIS_KELUAR, SALURAN_QRIS, "Operasional", 100_000),
+            transaksi(JENIS_MASUK, SALURAN_TUNAI, "Penjualan", 50_000),
+            transaksi(JENIS_MASUK, SALURAN_QRIS, "Penjualan", 999_000, bulanId = 2)
+        )
+        val ringkasan = ringkasanPerDompet(daftar, bulan.id)
+        assertEquals(50_000L, ringkasan.masukTunai)
+        assertEquals(0L, ringkasan.keluarTunai)
+        assertEquals(0L, ringkasan.masukQris)
+        assertEquals(100_000L, ringkasan.keluarQris)
+    }
+
+    @Test
     fun formatRupiahDanKelompokRibuan() {
         assertEquals("Rp 7.950.000", formatRupiah(7_950_000))
         assertEquals("-Rp 150.000", formatRupiah(-150_000))
