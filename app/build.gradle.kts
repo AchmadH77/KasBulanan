@@ -111,7 +111,7 @@ dependencies {
     // Online sync (Firebase Auth + Firestore) - guarded at runtime: when
     // Firebase is not configured the online layer stays dormant and the
     // app behaves exactly like the offline build.
-    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
