@@ -124,5 +124,5 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     // Real org.json for BackupHelper unit tests (Android provides it on device).
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
 }
